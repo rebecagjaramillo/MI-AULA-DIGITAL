@@ -91,7 +91,12 @@ function LoginContent() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5 ml-1">Contraseña</label>
+            <div className="flex justify-between items-center mb-1.5 ml-1 mr-1">
+              <label className="block text-sm font-medium text-slate-300">Contraseña</label>
+              <Link href="/forgot-password" className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
+                ¿Olvidaste tu contraseña?
+              </Link>
+            </div>
             <input
               type="password"
               required

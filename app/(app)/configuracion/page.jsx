@@ -40,7 +40,7 @@ export default function SettingsPage() {
 
   const wipeAll = async () => {
     if (!confirm('⚠️ ¿Borrar TODOS tus datos? (Grupos, alumnos, actividades, etc.) Esta acción no se puede deshacer.')) return
-    await api('reset', { method: 'POST' })
+    await api('profile/delete', { method: 'POST' })
     toast.success('Datos borrados. Recargando...')
     setTimeout(() => window.location.reload(), 1000)
   }

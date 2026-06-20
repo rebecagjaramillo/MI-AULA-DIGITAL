@@ -92,8 +92,6 @@ const DEFAULT_LAYOUTS = {
 
 const DEFAULT_VISIBLE = ['clock','timer','traffic','random','teams','instructions','todos','quote']
 
-const DEFAULT_VISIBLE = ['clock','timer','traffic','random','teams','instructions','todos','quote']
-
 const WORK_MODES = [
   { value: 'normal',   label: 'Clase normal',     emoji: '📚', color: 'from-sky-500 to-indigo-500' },
   { value: 'silencio', label: 'Lectura silenciosa', emoji: '🤫', color: 'from-violet-500 to-purple-500' },
@@ -102,8 +100,6 @@ const WORK_MODES = [
   { value: 'proyecto', label: 'Proyecto',         emoji: '🎯', color: 'from-amber-500 to-orange-500' },
   { value: 'recreo',   label: 'Receso',           emoji: '🎉', color: 'from-pink-500 to-rose-500' },
 ]
-
-const WORK_MODES = [
 
 const BG_COLORS = [
   { name: 'Aurora',  bg: 'bg-gradient-to-br from-sky-100 via-indigo-100 to-violet-100' },
@@ -119,6 +115,10 @@ export default function ClassroomScreenPage() {
   const { groups } = useGroups()
   const [groupId, setGroupId] = useState('')
   const [students, setStudents] = useState([])
+  const [isMounted, setIsMounted] = useState(false)
+  const [workMode, setWorkMode] = useState('normal')
+  const [bgIdx, setBgIdx] = useState(0)
+  const [privacy, setPrivacy] = useState(false)
   // Customizable layout (drag/resize/show/hide)
   const [editMode, setEditMode] = useState(false)
   const [visibleWidgets, setVisibleWidgets] = useState(DEFAULT_VISIBLE)
@@ -130,12 +130,15 @@ export default function ClassroomScreenPage() {
 
   // Load custom config from localStorage
   useEffect(() => {
+    setIsMounted(true)
     try {
       const saved = localStorage.getItem('mad_classroom_config')
       if (saved) {
         const c = JSON.parse(saved)
         if (Array.isArray(c.visible) && c.visible.length) setVisibleWidgets(c.visible)
-        if (c.layouts && typeof c.layouts === 'object') setLayouts(c.layouts)
+        if (c.layouts && typeof c.layouts === 'object' && Object.keys(c.layouts).length > 0) {
+          setLayouts(c.layouts)
+        }
       }
     } catch {}
   }, [])
@@ -177,7 +180,18 @@ export default function ClassroomScreenPage() {
     else document.exitFullscreen?.()
   }
 
-  const bg = BG_COLORS[bgIdx]
+  if (!isMounted) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center">
+        <div className="text-white flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-sm text-slate-400 font-medium">Cargando tu salón de clases...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const bg = BG_COLORS[bgIdx] || BG_COLORS[0]
   const isDark = bg.name === 'Noche'
   const cardClass = isDark
     ? 'bg-white/10 backdrop-blur border border-white/10 text-white'
@@ -277,7 +291,7 @@ export default function ClassroomScreenPage() {
       <div className={editMode ? 'edit-active px-2 md:px-4 py-3' : 'px-2 md:px-4 py-3'}>
         <ResponsiveGridLayout
           className="layout"
-          layouts={layouts}
+          layouts={layouts || DEFAULT_LAYOUTS}
           breakpoints={{ lg: 1200, md: 768, sm: 0 }}
           cols={{ lg: 12, md: 10, sm: 6 }}
           rowHeight={48}
