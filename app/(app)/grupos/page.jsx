@@ -17,10 +17,12 @@ import { TopBar } from '@/components/layout/TopBar'
 import { FilterBar } from '@/components/shared/FilterBar'
 import { LEVELS_NEW, GROUP_COLORS } from '@/lib/constants'
 import { useGroups } from '@/contexts/GroupsContext'
+import { useProfile } from '@/contexts/ProfileContext'
 
 export default function GroupsPage() {
   const router = useRouter()
   const { groups, subjects, reload } = useGroups()
+  const { activeSubject } = useProfile()
   
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -39,7 +41,7 @@ export default function GroupsPage() {
 
   const openCreate = () => {
     setEditing(null)
-    setForm({ ...emptyForm, level: filter.level || 'Primaria', grade: filter.grade || '1°' })
+    setForm({ ...emptyForm, level: filter.level || 'Primaria', grade: filter.grade || '1°', subject: activeSubject || '' })
     setOpen(true)
   }
   const openEdit = (g) => {
@@ -89,6 +91,7 @@ export default function GroupsPage() {
 
   // Build tree: level -> grade -> [groups]
   const filteredGroups = groups.filter(g => {
+    if (activeSubject && g.subject !== activeSubject) return false
     if (filter.level && (g.level || 'Primaria') !== filter.level) return false
     if (filter.grade && g.grade !== filter.grade) return false
     return true
@@ -120,7 +123,7 @@ export default function GroupsPage() {
 
       <FilterBar value={filter} onChange={setFilter} groups={groups} subjects={subjects} show={['level','grade']} />
 
-      {groups.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <LayoutGrid className="w-8 h-8 text-sky-500" />

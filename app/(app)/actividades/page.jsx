@@ -21,6 +21,7 @@ import { ACTIVITY_TYPES } from '@/lib/constants'
 import { TopBar } from '@/components/layout/TopBar'
 import { FilterBar } from '@/components/shared/FilterBar'
 import { useGroups } from '@/contexts/GroupsContext'
+import { useProfile } from '@/contexts/ProfileContext'
 
 function ActivitiesContent() {
   const router = useRouter()
@@ -28,7 +29,14 @@ function ActivitiesContent() {
   const paramGroupId = searchParams.get('groupId')
   
   const { groups, subjects } = useGroups()
-  const groupId = paramGroupId || (groups.length > 0 ? groups[0].id : '')
+  const { activeSubject } = useProfile()
+  
+  const filteredGroups = activeSubject ? groups.filter(g => g.subject === activeSubject) : groups;
+  const validGroupIds = new Set(filteredGroups.map(g => g.id));
+
+  const groupId = paramGroupId && validGroupIds.has(paramGroupId) 
+    ? paramGroupId 
+    : (filteredGroups.length > 0 ? filteredGroups[0].id : '')
   const setGroupId = (newId) => router.push(`/actividades?groupId=${newId}`)
 
   const [activities, setActivities] = useState([])
@@ -86,17 +94,17 @@ function ActivitiesContent() {
         }
       />
 
-      {groups.length === 0 ? (
+      {filteredGroups.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center">
-          <h3 className="font-bold text-slate-900 text-lg">Primero crea un grupo</h3>
-          <p className="text-sm text-slate-500 mt-1">Ve a "Mis grupos" para crear tu primer grupo.</p>
+          <h3 className="font-bold text-slate-900 text-lg">No hay grupos para esta materia</h3>
+          <p className="text-sm text-slate-500 mt-1">Ve a "Mis grupos" para crear tu primer grupo o cambia de materia.</p>
         </div>
       ) : (
         <>
           <FilterBar
             value={{ ...filter, group_id: groupId }}
             onChange={(v) => { setFilter(v); if (v.group_id !== undefined) setGroupId(v.group_id || '') }}
-            groups={groups} subjects={subjects}
+            groups={filteredGroups} subjects={subjects}
             show={['level','grade','group','subject','trimestre']}
           />
 

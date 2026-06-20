@@ -2,7 +2,9 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { Home, LayoutGrid, Users, ClipboardCheck, GraduationCap, MoreHorizontal } from 'lucide-react'
+import { Home, LayoutGrid, Users, ClipboardCheck, GraduationCap, MoreHorizontal, BookOpen } from 'lucide-react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useProfile } from '@/contexts/ProfileContext'
 
 const MOBILE_ITEMS = [
   { key: 'dashboard',  path: '/dashboard',  icon: Home,           label: 'Inicio' },
@@ -12,12 +14,34 @@ const MOBILE_ITEMS = [
 ]
 
 export function MobileHeader() {
+  const { profile, activeSubject, setActiveSubject } = useProfile()
+
   return (
-    <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-2">
-      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center">
-        <GraduationCap className="w-4 h-4 text-white" />
+    <div className="lg:hidden bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center">
+          <GraduationCap className="w-4 h-4 text-white" />
+        </div>
+        <div className="font-bold text-slate-900 text-sm">MI AULA</div>
       </div>
-      <div className="font-bold text-slate-900 text-sm">MI AULA DIGITAL</div>
+      
+      {profile?.subjects && profile.subjects.length > 0 && (
+        <div className="w-32">
+          <Select value={activeSubject || ''} onValueChange={setActiveSubject}>
+            <SelectTrigger className="w-full bg-slate-50 border-slate-200 text-xs font-semibold text-slate-700 h-8 rounded-lg focus:ring-sky-500">
+              <div className="flex items-center gap-1.5 truncate">
+                <BookOpen className="w-3 h-3 text-sky-500 flex-shrink-0" />
+                <span className="truncate">{activeSubject || 'Materia'}</span>
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {profile.subjects.map(s => (
+                <SelectItem key={s} value={s} className="font-medium text-xs">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
     </div>
   )
 }

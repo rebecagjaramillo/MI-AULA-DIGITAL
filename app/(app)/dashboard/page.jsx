@@ -42,10 +42,10 @@ function QuickAction({ icon: Icon, label, color, onClick }) {
 
 export default function DashboardPage() {
   const router = useRouter()
-  const { profile } = useProfile()
-  const [data, setData] = useState(null)
+  const { profile, activeSubject } = useProfile()
+  const [rawData, setRawData] = useState(null)
 
-  const load = () => api('dashboard').then(setData).catch(e => toast.error(e.message))
+  const load = () => api('dashboard').then(setRawData).catch(e => toast.error(e.message))
   useEffect(() => { load() }, [])
 
   const greet = useMemo(() => {
@@ -54,6 +54,23 @@ export default function DashboardPage() {
     if (h < 19) return 'Buenas tardes'
     return 'Buenas noches'
   }, [])
+
+  const data = useMemo(() => {
+    if (!rawData || !activeSubject) return rawData;
+    
+    // Filtramos los grupos por la materia activa
+    const filteredGroups = rawData.groups.filter(g => g.subject === activeSubject);
+    const validGroupIds = new Set(filteredGroups.map(g => g.id));
+    
+    return {
+      ...rawData,
+      groups: filteredGroups,
+      groups_count: filteredGroups.length,
+      alerts: rawData.alerts.filter(a => validGroupIds.has(a.group_id)),
+      upcoming_activities: rawData.upcoming_activities.filter(a => validGroupIds.has(a.group_id)),
+      // Nota: students_count y attendance_pct_last7 son globales en esta versión simplificada
+    }
+  }, [rawData, activeSubject])
 
   if (!data) return <div className="p-8 text-slate-500">Cargando...</div>
 

@@ -26,10 +26,13 @@ const PLAN_STATUSES = [
 ]
 
 export default function PlansPage() {
-  const { profile } = useProfile()
+  const { profile, activeSubject } = useProfile()
   const { groups } = useGroups()
   
+  const filteredGroups = activeSubject ? groups.filter(g => g.subject === activeSubject) : groups
+  
   const [plans, setPlans] = useState([])
+  const filteredPlans = activeSubject ? plans.filter(p => p.subject === activeSubject || (p.group_id && filteredGroups.some(g => g.id === p.group_id))) : plans
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [generating, setGenerating] = useState(false)
@@ -40,7 +43,7 @@ export default function PlansPage() {
   const load = () => api('lesson-plans').then(setPlans).catch(e => toast.error(e.message))
   useEffect(() => { load() }, [])
 
-  const openCreate = () => { setEditing(null); setForm(emptyForm); setLevelNotes(''); setOpen(true) }
+  const openCreate = () => { setEditing(null); setForm({ ...emptyForm, subject: activeSubject || '' }); setLevelNotes(''); setOpen(true) }
   const openEdit = (p) => { setEditing(p); setForm({ ...p, group_id: p.group_id || null }); setOpen(true) }
   
   const save = async () => {
@@ -98,18 +101,18 @@ export default function PlansPage() {
         action={<Button onClick={openCreate} className="bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-600 hover:to-pink-600 shadow-md text-white"><Sparkles className="w-4 h-4 mr-1.5" /> Nueva planeación</Button>}
       />
 
-      {plans.length === 0 ? (
+      {filteredPlans.length === 0 ? (
         <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center">
           <div className="w-16 h-16 bg-gradient-to-br from-violet-100 to-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Sparkles className="w-8 h-8 text-violet-500" />
           </div>
-          <h3 className="font-bold text-slate-900 text-lg">Crea tu primera planeación</h3>
-          <p className="text-sm text-slate-500 mt-1 mb-5">Usa IA para generar planeaciones detalladas en segundos</p>
+          <h3 className="font-bold text-slate-900 text-lg">{plans.length === 0 ? 'Crea tu primera planeación' : 'No hay planeaciones para esta materia'}</h3>
+          <p className="text-sm text-slate-500 mt-1 mb-5">{plans.length === 0 ? 'Usa IA para generar planeaciones detalladas en segundos' : 'Cambia de materia o crea una nueva planeación'}</p>
           <Button onClick={openCreate} className="bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-600 hover:to-pink-600 text-white"><Sparkles className="w-4 h-4 mr-1.5" /> Nueva planeación con IA</Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {plans.map(p => {
+          {filteredPlans.map(p => {
             const st = PLAN_STATUSES.find(s => s.value === p.status) || PLAN_STATUSES[0]
             return (
               <Card key={p.id} className="border-slate-100 hover:shadow-md transition-shadow group">
@@ -168,7 +171,7 @@ export default function PlansPage() {
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">— Sin grupo —</SelectItem>
-                    {groups.map(g => <SelectItem key={g.id} value={g.id}>{g.grade} {g.group_name}</SelectItem>)}
+                    {filteredGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.grade} {g.group_name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

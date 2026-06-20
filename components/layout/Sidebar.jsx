@@ -2,15 +2,16 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, GraduationCap } from 'lucide-react'
+import { ChevronRight, GraduationCap, BookOpen } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { NAV_ITEMS } from '@/lib/constants'
 import { initials } from '@/lib/helpers'
 import { useProfile } from '@/contexts/ProfileContext'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { profile } = useProfile()
+  const { profile, activeSubject, setActiveSubject } = useProfile()
 
   return (
     <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-white border-r border-slate-200">
@@ -25,6 +26,26 @@ export default function Sidebar() {
           </div>
         </div>
       </div>
+
+      {profile?.subjects && profile.subjects.length > 0 && (
+        <div className="px-4 pt-4 pb-2 border-b border-slate-100">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block ml-1">Materia Activa</label>
+          <Select value={activeSubject || ''} onValueChange={setActiveSubject}>
+            <SelectTrigger className="w-full bg-slate-50 border-slate-200 text-sm font-semibold text-slate-700 h-9 rounded-xl focus:ring-sky-500">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-4 h-4 text-sky-500" />
+                <SelectValue placeholder="Materia" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              {profile.subjects.map(s => (
+                <SelectItem key={s} value={s} className="font-medium">{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
         {NAV_ITEMS.map(item => {
           const Icon = item.icon
