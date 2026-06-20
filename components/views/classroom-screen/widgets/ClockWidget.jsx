@@ -22,21 +22,14 @@ const VALUES_BY_MONTH = [
   { name: 'Paz',            emoji: '☮️', desc: 'Convivencia armónica' },       // Diciembre
 ]
 
-export function ClockWidget({ isDark }) {
+function ClockTime({ isDark }) {
   const [now, setNow] = useState(new Date())
-  
-  const defaultMonthValue = VALUES_BY_MONTH[new Date().getMonth()]
-  const [monthValue, setMonthValue] = useState(defaultMonthValue)
-  const [editingValue, setEditingValue] = useState(false)
-  const [valueDraft, setValueDraft] = useState({ name: defaultMonthValue.name, emoji: defaultMonthValue.emoji, desc: defaultMonthValue.desc })
-
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 1000)
     return () => clearInterval(interval)
   }, [])
-
   return (
-    <div className="flex flex-col h-full">
+    <>
       <div className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-white/60' : 'text-slate-500'} text-center capitalize`}>
         {now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
       </div>
@@ -46,6 +39,20 @@ export function ClockWidget({ isDark }) {
         </div>
         <div className={`text-lg tabular-nums ${isDark ? 'text-white/50' : 'text-slate-400'} mt-1`}>{String(now.getSeconds()).padStart(2,'0')}s</div>
       </div>
+    </>
+  )
+}
+
+export function ClockWidget({ isDark }) {
+  
+  const defaultMonthValue = VALUES_BY_MONTH[new Date().getMonth()]
+  const [monthValue, setMonthValue] = useState(defaultMonthValue)
+  const [editingValue, setEditingValue] = useState(false)
+  const [valueDraft, setValueDraft] = useState({ name: defaultMonthValue.name, emoji: defaultMonthValue.emoji, desc: defaultMonthValue.desc })
+
+  return (
+    <div className="flex flex-col h-full">
+      <ClockTime isDark={isDark} />
       <div className={`mt-2 w-full rounded-xl px-3 py-2 ${isDark ? 'bg-gradient-to-r from-amber-500/20 to-pink-500/20 border border-amber-300/30' : 'bg-gradient-to-r from-amber-100 to-pink-100 border border-amber-200'} flex items-center gap-2 group`}>
         <div className="text-2xl flex-shrink-0">{monthValue.emoji}</div>
         <div className="flex-1 min-w-0">
@@ -53,13 +60,13 @@ export function ClockWidget({ isDark }) {
           <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} truncate`}>{monthValue.name}</div>
           <div className={`text-[10px] ${isDark ? 'text-white/70' : 'text-slate-600'} truncate`}>{monthValue.desc}</div>
         </div>
-        <Button size="icon" variant="ghost" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setValueDraft({ name: monthValue.name, emoji: monthValue.emoji, desc: monthValue.desc }); setEditingValue(true) }} className={`h-7 w-7 flex-shrink-0 ${isDark ? 'hover:bg-white/10 text-white' : ''}`} title="Cambiar valor">
+        <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setValueDraft({ name: monthValue.name, emoji: monthValue.emoji, desc: monthValue.desc }); setEditingValue(true) }} className={`h-7 w-7 flex-shrink-0 ${isDark ? 'hover:bg-white/10 text-white' : ''}`} title="Cambiar valor">
           <Pencil className="w-3.5 h-3.5" />
         </Button>
       </div>
 
       <Dialog open={editingValue} onOpenChange={setEditingValue}>
-        <DialogContent className="sm:max-w-[480px]" onPointerDownCapture={e => e.stopPropagation()} onKeyDownCapture={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
             <DialogTitle>✨ Valor del mes</DialogTitle>
             <DialogDescription>Elige un valor predefinido o personaliza el tuyo</DialogDescription>

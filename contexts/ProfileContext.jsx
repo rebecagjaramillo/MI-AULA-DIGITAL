@@ -10,12 +10,28 @@ export function ProfileProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [activeSubject, setActiveSubject] = useState(null)
 
+  const ensureArrays = (p) => {
+    if (!p) return p;
+    if (typeof p.subjects === 'string') {
+      p.subjects = p.subjects.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (!Array.isArray(p.subjects)) {
+      p.subjects = [];
+    }
+    if (typeof p.education_levels === 'string') {
+      p.education_levels = p.education_levels.split(',').map(s => s.trim()).filter(Boolean);
+    } else if (!Array.isArray(p.education_levels)) {
+      p.education_levels = p.education_level ? [p.education_level] : []; // Migrate old string
+    }
+    return p;
+  };
+
   useEffect(() => {
     api('profile')
       .then(p => { 
-        setProfile(p); 
-        if (p?.subjects && p.subjects.length > 0) {
-          setActiveSubject(p.subjects[0])
+        const validP = ensureArrays(p);
+        setProfile(validP || { subjects: [], education_levels: [] }); 
+        if (validP?.subjects && validP.subjects.length > 0) {
+          setActiveSubject(validP.subjects[0])
         }
         setLoading(false) 
       })
@@ -23,9 +39,10 @@ export function ProfileProvider({ children }) {
   }, [])
 
   const updateProfile = useCallback((newProfile) => {
-    setProfile(newProfile)
-    if (newProfile?.subjects && newProfile.subjects.length > 0 && (!activeSubject || !newProfile.subjects.includes(activeSubject))) {
-      setActiveSubject(newProfile.subjects[0])
+    const validProfile = ensureArrays(newProfile);
+    setProfile(validProfile)
+    if (validProfile?.subjects && validProfile.subjects.length > 0 && (!activeSubject || !validProfile.subjects.includes(activeSubject))) {
+      setActiveSubject(validProfile.subjects[0])
     }
   }, [activeSubject])
 

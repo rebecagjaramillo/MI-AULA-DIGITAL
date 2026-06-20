@@ -10,13 +10,21 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { initials, todayISO } from '@/lib/helpers'
-import { STATUS_CONFIG } from '@/lib/constants'
+import { STATUS_CONFIG, LEVELS_NEW } from '@/lib/constants'
 import { TopBar } from '@/components/layout/TopBar'
+import { useProfile } from '@/contexts/ProfileContext'
 
 export default function ReportsPage() {
+  const { profile } = useProfile()
+  const customLevels = Array.isArray(profile?.education_levels) && profile.education_levels.length > 0 ? profile.education_levels : []
+
   const [groups, setGroups] = useState([])
   const [students, setStudents] = useState([])
   const [reportType, setReportType] = useState('group')
+  
+  const [filterLevel, setFilterLevel] = useState('all')
+  const [filterGrade, setFilterGrade] = useState('all')
+  
   const [groupId, setGroupId] = useState('')
   const [studentId, setStudentId] = useState('')
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10) })
@@ -119,12 +127,52 @@ export default function ReportsPage() {
             })}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          {/* Filters Row 1 */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+            <div>
+              <Label className="text-xs font-semibold">Nivel</Label>
+              <Select value={filterLevel} onValueChange={setFilterLevel}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {customLevels.length > 0 
+                    ? customLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)
+                    : LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)
+                  }
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Grado</Label>
+              <Select value={filterGrade} onValueChange={setFilterGrade}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {Array.from(new Set(groups.map(g => g.grade).filter(Boolean))).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Desde</Label>
+              <Input type="date" className="mt-1" value={from} onChange={e => setFrom(e.target.value)} />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Hasta</Label>
+              <Input type="date" className="mt-1" value={to} onChange={e => setTo(e.target.value)} />
+            </div>
+          </div>
+
+          {/* Filters Row 2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-semibold">Grupo</Label>
               <Select value={groupId} onValueChange={setGroupId}>
                 <SelectTrigger className="mt-1"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>{groups.map(g => <SelectItem key={g.id} value={g.id}>{g.grade} {g.group_name} {g.subject && `· ${g.subject}`}</SelectItem>)}</SelectContent>
+                <SelectContent>
+                  {groups
+                    .filter(g => (filterLevel === 'all' || g.level === filterLevel) && (filterGrade === 'all' || g.grade === filterGrade))
+                    .map(g => <SelectItem key={g.id} value={g.id}>{g.level} · {g.grade} {g.group_name} {g.subject && `· ${g.subject}`}</SelectItem>)}
+                </SelectContent>
               </Select>
             </div>
             {reportType === 'student' && (
@@ -136,14 +184,6 @@ export default function ReportsPage() {
                 </Select>
               </div>
             )}
-            <div>
-              <Label className="text-xs font-semibold">Desde</Label>
-              <Input type="date" className="mt-1" value={from} onChange={e => setFrom(e.target.value)} />
-            </div>
-            <div>
-              <Label className="text-xs font-semibold">Hasta</Label>
-              <Input type="date" className="mt-1" value={to} onChange={e => setTo(e.target.value)} />
-            </div>
           </div>
 
           <div className="flex flex-wrap gap-2 mt-4">

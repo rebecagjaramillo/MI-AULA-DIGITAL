@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
@@ -23,6 +23,25 @@ const DEFAULT_TERM_DATES = {
 export default function SettingsPage() {
   const { profile, updateProfile } = useProfile()
   const [form, setForm] = useState(profile || {})
+  const [newLevel, setNewLevel] = useState('')
+  const levels = Array.isArray(profile?.education_levels) ? profile.education_levels : []
+
+  const addLevel = async () => {
+    if (!newLevel.trim()) return
+    const n = newLevel.trim()
+    if (levels.includes(n)) return
+    const newList = [...levels, n]
+    const p = await api('profile', { method: 'POST', body: JSON.stringify({ education_levels: newList }) })
+    updateProfile(p)
+    setNewLevel('')
+  }
+  
+  const removeLevel = async (lv) => {
+    if (!confirm(`¿Eliminar nivel "${lv}"?`)) return
+    const newList = levels.filter(l => l !== lv)
+    const p = await api('profile', { method: 'POST', body: JSON.stringify({ education_levels: newList }) })
+    updateProfile(p)
+  }
 
   useEffect(() => { setForm(profile || {}) }, [profile])
 
@@ -56,14 +75,8 @@ export default function SettingsPage() {
               <div><Label className="text-xs font-semibold">Nombre completo</Label><Input className="mt-1" value={form.full_name || ''} onChange={e => setForm({...form, full_name: e.target.value})} /></div>
               <div><Label className="text-xs font-semibold">Nombre a mostrar</Label><Input className="mt-1" value={form.display_name || ''} onChange={e => setForm({...form, display_name: e.target.value})} /></div>
             </div>
-            <div><Label className="text-xs font-semibold">Escuela</Label><Input className="mt-1" value={form.school_name || ''} onChange={e => setForm({...form, school_name: e.target.value})} /></div>
             <div className="grid grid-cols-2 gap-3">
-              <div><Label className="text-xs font-semibold">Nivel educativo</Label>
-                <Select value={form.education_level || 'Primaria'} onValueChange={v => setForm({...form, education_level: v})}>
-                  <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                  <SelectContent>{LEVELS.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}</SelectContent>
-                </Select>
-              </div>
+              <div><Label className="text-xs font-semibold">Escuela</Label><Input className="mt-1" value={form.school_name || ''} onChange={e => setForm({...form, school_name: e.target.value})} /></div>
               <div><Label className="text-xs font-semibold">Turno</Label>
                 <Select value={form.shift || 'Matutino'} onValueChange={v => setForm({...form, shift: v})}>
                   <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
@@ -72,6 +85,25 @@ export default function SettingsPage() {
               </div>
             </div>
             <div><Label className="text-xs font-semibold">Materias que impartes</Label><Input className="mt-1" value={form.subjects || ''} onChange={e => setForm({...form, subjects: e.target.value})} /></div>
+
+            <div className="pt-4 border-t border-slate-100 mt-4">
+              <Label className="text-sm font-bold flex items-center gap-2 mb-2">Niveles escolares</Label>
+              <p className="text-xs text-slate-500 mb-3">Agrega los niveles educativos correspondientes a tu actividad docente.</p>
+              <div className="space-y-2">
+                {levels.length === 0 ? (
+                  <div className="text-sm text-slate-500 py-2">Sin niveles configurados.</div>
+                ) : levels.map(lv => (
+                  <div key={lv} className="flex items-center justify-between p-2 rounded-lg border border-slate-100 bg-slate-50">
+                    <span className="text-sm font-medium">{lv}</span>
+                    <Button size="icon" variant="ghost" className="h-7 w-7 text-rose-500 hover:bg-rose-100" onClick={() => removeLevel(lv)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </div>
+                ))}
+              </div>
+              <div className="flex gap-2 mt-4 pt-4 border-t border-slate-100">
+                <Input placeholder="Ej. 2do Primaria" value={newLevel} onChange={e => setNewLevel(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') addLevel() }} />
+                <Button onClick={addLevel} className="bg-sky-500 hover:bg-sky-600 px-3"><Plus className="w-4 h-4 mr-1.5" /> Agregar</Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

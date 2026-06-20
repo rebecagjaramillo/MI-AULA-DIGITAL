@@ -23,8 +23,8 @@ export default function OnboardingPage() {
     full_name: '',
     display_name: '',
     school_name: '',
-    education_level: 'Primaria',
-    subjects: [] // array of subjects
+    education_levels: [], // array
+    subjects: [] // array
   })
 
   useEffect(() => {
@@ -61,6 +61,27 @@ export default function OnboardingPage() {
     setCustomSubject('')
   }
 
+  const toggleLevel = (lv) => {
+    setForm(prev => {
+      const isSelected = prev.education_levels.includes(lv)
+      if (isSelected) {
+        return { ...prev, education_levels: prev.education_levels.filter(l => l !== lv) }
+      } else {
+        return { ...prev, education_levels: [...prev.education_levels, lv] }
+      }
+    })
+  }
+
+  const [customLevel, setCustomLevel] = useState('')
+  const addCustomLevel = (e) => {
+    e.preventDefault()
+    if (!customLevel.trim()) return
+    if (!form.education_levels.includes(customLevel.trim())) {
+      setForm(prev => ({ ...prev, education_levels: [...prev.education_levels, customLevel.trim()] }))
+    }
+    setCustomLevel('')
+  }
+
   const finishOnboarding = async () => {
     if (form.subjects.length === 0) {
       toast.error('Por favor selecciona al menos una materia')
@@ -72,7 +93,8 @@ export default function OnboardingPage() {
       // Formatear para el API y agregar setupCompleted: true
       const payload = {
         ...form,
-        subjects: form.subjects, // Array en lugar de string
+        education_levels: form.education_levels,
+        subjects: form.subjects, 
         setupCompleted: true,
       }
 
@@ -157,25 +179,49 @@ export default function OnboardingPage() {
               <div className="w-14 h-14 rounded-2xl bg-sky-500/10 flex items-center justify-center mb-6 ring-1 ring-sky-500/20">
                 <Layers className="w-7 h-7 text-sky-400" />
               </div>
-              <h1 className="text-3xl font-bold text-white mb-2">Nivel Educativo</h1>
-              <p className="text-slate-400 mb-8">¿En qué nivel escolar impartes clases habitualmente?</p>
+              <h1 className="text-3xl font-bold text-white mb-2">Niveles Escolares</h1>
+              <p className="text-slate-400 mb-8">¿En qué niveles o grados impartes clases habitualmente? Selecciona uno o más.</p>
               
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {LEVELS.map(level => (
-                  <button
-                    key={level}
-                    onClick={() => setForm({...form, education_level: level})}
-                    className={`py-4 px-4 rounded-2xl border text-sm font-medium transition-all flex flex-col items-center justify-center gap-2 ${
-                      form.education_level === level 
-                      ? 'bg-sky-500/20 border-sky-500 text-sky-300 ring-1 ring-sky-500/50' 
-                      : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
-                    }`}
-                  >
-                    {form.education_level === level && <CheckCircle2 className="w-5 h-5 mb-1" />}
-                    {level}
-                  </button>
-                ))}
+                {LEVELS.filter(l => l !== 'Otro').map(level => {
+                  const isSelected = form.education_levels.includes(level)
+                  return (
+                    <button
+                      key={level}
+                      onClick={() => toggleLevel(level)}
+                      className={`py-4 px-4 rounded-2xl border text-sm font-medium transition-all flex flex-col items-center justify-center gap-2 ${
+                        isSelected
+                        ? 'bg-sky-500/20 border-sky-500 text-sky-300 ring-1 ring-sky-500/50' 
+                        : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
+                      }`}
+                    >
+                      {isSelected && <CheckCircle2 className="w-5 h-5 mb-1" />}
+                      {level}
+                    </button>
+                  )
+                })}
               </div>
+
+              <form onSubmit={addCustomLevel} className="flex gap-3 mt-6 pt-6 border-t border-slate-800">
+                <Input 
+                  className="bg-slate-800/50 border-slate-700 text-white focus:ring-sky-500 flex-1" 
+                  placeholder="Ej. Taller de Arte, Curso Verano..."
+                  value={customLevel}
+                  onChange={e => setCustomLevel(e.target.value)}
+                />
+                <Button type="button" onClick={addCustomLevel} variant="secondary" className="bg-slate-800 text-slate-300 hover:bg-slate-700 border border-slate-700">Agregar</Button>
+              </form>
+
+              {form.education_levels.length > 0 && (
+                <div className="mt-6 p-4 rounded-xl bg-slate-800/30 border border-slate-800 flex flex-wrap gap-2">
+                  <span className="text-sm text-slate-500 w-full mb-1">Niveles seleccionados:</span>
+                  {form.education_levels.map(l => (
+                    <Badge key={l} className="bg-sky-500/20 text-sky-300 hover:bg-sky-500/30 border-none px-3 py-1 text-sm font-normal">
+                      {l} <button onClick={() => toggleLevel(l)} className="ml-2 font-bold hover:text-white">&times;</button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

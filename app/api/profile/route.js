@@ -49,9 +49,25 @@ export async function POST(request) {
     const existing = await col.findOne({ teacher_id: TEACHER_ID })
     
     if (existing) {
-      await col.updateOne({ teacher_id: TEACHER_ID }, { $set: { ...body, updated_at: now } })
+      const updateData = { ...body, updated_at: now }
+      if (typeof updateData.subjects === 'string') {
+        updateData.subjects = updateData.subjects.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      if (typeof updateData.education_levels === 'string') {
+        updateData.education_levels = updateData.education_levels.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      delete updateData._id
+      delete updateData.teacher_id
+      await col.updateOne({ teacher_id: TEACHER_ID }, { $set: updateData })
     } else {
-      await col.insertOne({ id: uuidv4(), teacher_id: TEACHER_ID, ...body, created_at: now, updated_at: now })
+      const newData = { ...body }
+      if (typeof newData.subjects === 'string') {
+        newData.subjects = newData.subjects.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      if (typeof newData.education_levels === 'string') {
+        newData.education_levels = newData.education_levels.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      await col.insertOne({ id: uuidv4(), teacher_id: TEACHER_ID, ...newData, created_at: now, updated_at: now })
     }
     
     const p = await col.findOne({ teacher_id: TEACHER_ID })

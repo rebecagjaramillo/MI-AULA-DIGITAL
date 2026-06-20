@@ -6,13 +6,18 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { LEVELS_NEW, TRIMESTRES } from '@/lib/constants'
+import { useProfile } from '@/contexts/ProfileContext'
 
 export function FilterBar({ value, onChange, groups = [], subjects = [], show = ['level','grade','group','subject','trimestre','dateRange'], compact = false }) {
+  const { profile } = useProfile()
+  const customLevels = Array.isArray(profile?.education_levels) && profile.education_levels.length > 0 ? profile.education_levels : []
+  
   const v = value || {}
   const set = (patch) => onChange({ ...v, ...patch })
-  // Available grades based on selected level
+  
+  // Available grades based on selected level or groups
   const levelDef = LEVELS_NEW.find(l => l.key === v.level)
-  const availableGrades = levelDef ? levelDef.grades : Array.from(new Set(LEVELS_NEW.flatMap(l => l.grades)))
+  const availableGrades = levelDef ? levelDef.grades : Array.from(new Set(groups.map(g => g.grade).filter(Boolean)))
   // Filter groups by level + grade
   const filteredGroups = groups.filter(g => {
     if (v.level && g.level && g.level !== v.level) return false
@@ -30,7 +35,10 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)}
+                {customLevels.length > 0 
+                  ? customLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)
+                  : LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)
+                }
               </SelectContent>
             </Select>
           </div>

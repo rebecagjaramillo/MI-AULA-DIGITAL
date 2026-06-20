@@ -14,6 +14,8 @@ import { Progress } from '@/components/ui/progress'
 import { TopBar } from '@/components/layout/TopBar'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
+import { useProfile } from '@/contexts/ProfileContext'
+import { LEVELS_NEW } from '@/lib/constants'
 
 const TOPIC_STATUSES = [
   { value: 'no_iniciado', label: 'No iniciado', color: 'bg-slate-100 text-slate-600 border-slate-200' },
@@ -24,23 +26,27 @@ const TOPIC_STATUSES = [
 ]
 
 export default function CurriculumPage() {
+  const { activeSubject, profile } = useProfile()
+  const customLevels = Array.isArray(profile?.education_levels) && profile.education_levels.length > 0 ? profile.education_levels : []
+  
   const [units, setUnits] = useState([])
-  const [filterSubject, setFilterSubject] = useState('')
   const [filterGrade, setFilterGrade] = useState('')
+  const [filterLevel, setFilterLevel] = useState('')
   const [unitOpen, setUnitOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState(null)
-  const [unitForm, setUnitForm] = useState({ title: '', description: '', subject: '', grade: '' })
+  const [unitForm, setUnitForm] = useState({ title: '', description: '', subject: '', grade: '', level: '' })
 
   const load = () => {
     let q = ''
-    if (filterSubject) q += '?subject=' + encodeURIComponent(filterSubject)
+    if (activeSubject) q += '?subject=' + encodeURIComponent(activeSubject)
     if (filterGrade) q += (q ? '&' : '?') + 'grade=' + encodeURIComponent(filterGrade)
+    if (filterLevel) q += (q ? '&' : '?') + 'level=' + encodeURIComponent(filterLevel)
     api('curriculum/units' + q).then(setUnits).catch(e => toast.error(e.message))
   }
-  useEffect(() => { load() }, [filterSubject, filterGrade])
+  useEffect(() => { load() }, [activeSubject, filterGrade, filterLevel])
 
-  const openCreateUnit = () => { setEditingUnit(null); setUnitForm({ title: '', description: '', subject: filterSubject, grade: filterGrade }); setUnitOpen(true) }
-  const openEditUnit = (u) => { setEditingUnit(u); setUnitForm({ title: u.title, description: u.description, subject: u.subject, grade: u.grade }); setUnitOpen(true) }
+  const openCreateUnit = () => { setEditingUnit(null); setUnitForm({ title: '', description: '', subject: activeSubject || '', grade: filterGrade, level: filterLevel }); setUnitOpen(true) }
+  const openEditUnit = (u) => { setEditingUnit(u); setUnitForm({ title: u.title, description: u.description, subject: u.subject, grade: u.grade, level: u.level }); setUnitOpen(true) }
   const saveUnit = async () => {
     if (!unitForm.title.trim()) return toast.error('Pon un título')
     try {
@@ -74,14 +80,32 @@ export default function CurriculumPage() {
       />
 
       <Card className="border-slate-100 mb-4">
-        <CardContent className="p-4 flex flex-wrap items-end gap-3">
-          <div className="flex-1 min-w-[180px]">
-            <Label className="text-xs font-semibold">Filtrar por materia</Label>
-            <Input className="mt-1" placeholder="Ej. Matemáticas" value={filterSubject} onChange={e => setFilterSubject(e.target.value)} />
+        <CardContent className="p-4 flex flex-wrap items-center gap-4">
+          <div className="flex-1 min-w-[200px] flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-sky-100 to-indigo-100 flex items-center justify-center border border-sky-200/50 shadow-sm">
+              <BookOpen className="w-6 h-6 text-sky-600" />
+            </div>
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Temario actual</div>
+              <div className="text-xl font-black text-slate-800 leading-tight">{activeSubject || 'Sin materia'}</div>
+            </div>
+          </div>
+          <div className="min-w-[140px]">
+            <Label className="text-xs font-semibold">Nivel</Label>
+            <Select value={filterLevel || 'all'} onValueChange={v => setFilterLevel(v === 'all' ? '' : v)}>
+              <SelectTrigger className="mt-1 h-10"><SelectValue placeholder="Todos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {customLevels.length > 0 
+                  ? customLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)
+                  : LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)
+                }
+              </SelectContent>
+            </Select>
           </div>
           <div className="min-w-[140px]">
             <Label className="text-xs font-semibold">Grado</Label>
-            <Input className="mt-1" placeholder="Ej. 5°" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} />
+            <Input className="mt-1 h-10" placeholder="Ej. 5°" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} />
           </div>
           <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[200px]">
             <div className="text-xs font-semibold text-emerald-700">Avance general</div>
@@ -117,6 +141,7 @@ export default function CurriculumPage() {
                       <div className="flex items-center gap-2 flex-wrap mb-1">
                         <h3 className="font-bold text-slate-900 text-lg">{u.title}</h3>
                         {u.subject && <Badge variant="outline">{u.subject}</Badge>}
+                        {u.level && <Badge variant="outline">{u.level}</Badge>}
                         {u.grade && <Badge variant="outline">{u.grade}</Badge>}
                       </div>
                       {u.description && <p className="text-xs text-slate-500">{u.description}</p>}
@@ -169,14 +194,27 @@ export default function CurriculumPage() {
               <Label className="text-xs font-semibold">Descripción</Label>
               <Textarea className="mt-1 resize-none" rows={2} value={unitForm.description} onChange={e => setUnitForm({...unitForm, description: e.target.value})} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <Label className="text-xs font-semibold">Materia</Label>
-                <Input className="mt-1" value={unitForm.subject} onChange={e => setUnitForm({...unitForm, subject: e.target.value})} placeholder="Ej. Matemáticas" />
+                <Input className="mt-1" value={unitForm.subject || ''} onChange={e => setUnitForm({...unitForm, subject: e.target.value})} placeholder="Ej. Matemáticas" />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold">Nivel</Label>
+                <Select value={unitForm.level || 'none'} onValueChange={v => setUnitForm({...unitForm, level: v === 'none' ? '' : v})}>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin Nivel</SelectItem>
+                    {customLevels.length > 0 
+                      ? customLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)
+                      : LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)
+                    }
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <Label className="text-xs font-semibold">Grado</Label>
-                <Input className="mt-1" value={unitForm.grade} onChange={e => setUnitForm({...unitForm, grade: e.target.value})} placeholder="Ej. 5°" />
+                <Input className="mt-1" value={unitForm.grade || ''} onChange={e => setUnitForm({...unitForm, grade: e.target.value})} placeholder="Ej. 5°" />
               </div>
             </div>
           </div>
