@@ -3,9 +3,7 @@ import { Pause, Play, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
-import { WidgetContainer } from './WidgetContainer'
-
-export const TimerWidget = React.forwardRef(({ id, isDark, editMode, onRemove, className, ...props }, ref) => {
+export function TimerWidget({ isDark }) {
   const [timerMin, setTimerMin] = useState(5)
   const [timerSec, setTimerSec] = useState(0)
   const [timerInitial, setTimerInitial] = useState(300)
@@ -53,7 +51,7 @@ export const TimerWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
   }
 
   return (
-    <WidgetContainer ref={ref} id={id} title="Temporizador" icon="⏱️" isDark={isDark} editMode={editMode} onRemove={onRemove} className={className} {...props}>
+    <div className="flex flex-col h-full">
       <div className="flex-1 flex flex-col items-center justify-center min-h-0">
         <div className={`text-5xl md:text-6xl font-bold tabular-nums ${timerLeft <= 10 && timerRunning ? 'text-rose-500 animate-pulse' : ''}`}>
           {formatTime(Math.max(0, timerLeft))}
@@ -75,19 +73,18 @@ export const TimerWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
         )}
         <div className="flex gap-1 ml-auto flex-wrap">
           {[1,3,5,10,15].map(m => (
-            <Button key={m} size="sm" variant="outline" className={`h-6 px-1.5 text-[10px] ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`} onClick={() => { setTimerMin(m); setTimerSec(0); setTimerInitial(m*60); setTimerLeft(m*60); setTimerRunning(false) }}>{m}m</Button>
+            <Button key={m} size="sm" variant="outline" className={`h-6 px-1.5 text-[10px] ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`} onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setTimerMin(m); setTimerSec(0); setTimerInitial(m*60); setTimerLeft(m*60); setTimerRunning(false) }}>{m}m</Button>
           ))}
         </div>
       </div>
       <div className="flex gap-1.5 mt-2">
-        <Button size="sm" onClick={timerRunning ? () => setTimerRunning(false) : startTimer} className={`flex-1 h-8 ${timerRunning ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
+        <Button size="sm" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); timerRunning ? setTimerRunning(false) : startTimer() }} className={`flex-1 h-8 ${timerRunning ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}>
           {timerRunning ? <><Pause className="w-3.5 h-3.5 mr-1" /> Pausa</> : <><Play className="w-3.5 h-3.5 mr-1" /> Iniciar</>}
         </Button>
-        <Button size="sm" variant="outline" onClick={resetTimer} className={`h-8 ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`}>
+        <Button size="sm" variant="outline" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); resetTimer() }} className={`h-8 ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`}>
           <RotateCcw className="w-3.5 h-3.5" />
         </Button>
       </div>
-    </WidgetContainer>
+    </div>
   )
-})
-TimerWidget.displayName = 'TimerWidget'
+}

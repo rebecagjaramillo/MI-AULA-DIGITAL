@@ -4,9 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
-import { WidgetContainer } from './WidgetContainer'
-
-export const TeamsWidget = React.forwardRef(({ id, isDark, editMode, onRemove, className, students = [], privacy, ...props }, ref) => {
+export function TeamsWidget({ isDark, students = [], privacy }) {
   const [teamCount, setTeamCount] = useState(4)
   const [teams, setTeams] = useState([])
 
@@ -19,11 +17,11 @@ export const TeamsWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
   }
 
   return (
-    <WidgetContainer ref={ref} id={id} title="Equipos aleatorios" icon="👥" isDark={isDark} editMode={editMode} onRemove={onRemove} className={className} {...props}>
+    <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 mb-2">
         <Label className="text-xs whitespace-nowrap">Equipos:</Label>
         <Input type="number" min="2" max="10" className="w-14 h-7 text-center text-sm" value={teamCount} onChange={e => setTeamCount(Math.max(2, Math.min(10, Number(e.target.value) || 2)))} />
-        <Button size="sm" onClick={makeTeams} disabled={students.length === 0} className="bg-emerald-500 hover:bg-emerald-600 h-7 ml-auto">
+        <Button size="sm" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); makeTeams() }} disabled={students.length === 0} className="bg-emerald-500 hover:bg-emerald-600 h-7 ml-auto">
           <Shuffle className="w-3.5 h-3.5 mr-1" /> Crear
         </Button>
       </div>
@@ -50,7 +48,6 @@ export const TeamsWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
           })}
         </div>
       )}
-    </WidgetContainer>
+    </div>
   )
-})
-TeamsWidget.displayName = 'TeamsWidget'
+}

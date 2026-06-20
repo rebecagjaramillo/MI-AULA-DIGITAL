@@ -3,9 +3,7 @@ import { Dices, Shuffle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { initials } from '@/lib/helpers'
-import { WidgetContainer } from './WidgetContainer'
-
-export const RandomStudentWidget = React.forwardRef(({ id, isDark, editMode, onRemove, className, students = [], privacy, ...props }, ref) => {
+export function RandomStudentWidget({ isDark, students = [], privacy }) {
   const [randomStudent, setRandomStudent] = useState(null)
   const [spinning, setSpinning] = useState(false)
   const [excludeRecent, setExcludeRecent] = useState([])
@@ -34,12 +32,12 @@ export const RandomStudentWidget = React.forwardRef(({ id, isDark, editMode, onR
   }
 
   return (
-    <WidgetContainer ref={ref} id={id} title="Alumno al azar" icon="🎲" isDark={isDark} editMode={editMode} onRemove={onRemove} className={className} {...props}>
+    <div className="flex flex-col h-full">
       <div className="flex-1 flex items-center justify-center min-h-0">
         {students.length === 0 ? (
           <div className={`text-xs ${isDark ? 'text-white/50' : 'text-slate-500'} text-center`}>Selecciona un grupo arriba ↑</div>
         ) : !randomStudent ? (
-          <button onClick={pickRandom} className="text-center w-full py-4">
+          <button onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); pickRandom() }} className="text-center w-full py-4">
             <Dices className={`w-10 h-10 mx-auto mb-2 ${isDark ? 'text-white/40' : 'text-slate-300'}`} />
             <div className={`text-xs font-medium ${isDark ? 'text-white/60' : 'text-slate-500'}`}>Toca para elegir alumno</div>
           </button>
@@ -55,12 +53,11 @@ export const RandomStudentWidget = React.forwardRef(({ id, isDark, editMode, onR
         )}
       </div>
       <div className="flex gap-1.5 mt-2">
-        <Button onClick={pickRandom} disabled={spinning || students.length === 0} className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-600 hover:to-pink-600 text-white h-8">
+        <Button onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); pickRandom() }} disabled={spinning || students.length === 0} className="flex-1 bg-gradient-to-r from-violet-500 to-pink-500 hover:from-violet-600 hover:to-pink-600 text-white h-8">
           <Shuffle className="w-3.5 h-3.5 mr-1.5" /> {spinning ? 'Girando...' : '🎲 Elegir'}
         </Button>
-        {randomStudent && <Button size="sm" variant="outline" onClick={resetRandom} className={`h-8 ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`}>Reset</Button>}
+        {randomStudent && <Button size="sm" variant="outline" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); resetRandom() }} className={`h-8 ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`}>Reset</Button>}
       </div>
-    </WidgetContainer>
+    </div>
   )
-})
-RandomStudentWidget.displayName = 'RandomStudentWidget'
+}

@@ -22,7 +22,7 @@ const VALUES_BY_MONTH = [
   { name: 'Paz',            emoji: '☮️', desc: 'Convivencia armónica' },       // Diciembre
 ]
 
-export const ClockWidget = React.forwardRef(({ id, isDark, editMode, onRemove, className, ...props }, ref) => {
+export function ClockWidget({ isDark }) {
   const [now, setNow] = useState(new Date())
   
   const defaultMonthValue = VALUES_BY_MONTH[new Date().getMonth()]
@@ -36,7 +36,7 @@ export const ClockWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
   }, [])
 
   return (
-    <WidgetContainer ref={ref} id={id} title="Reloj + Fecha + Valor" icon="🕐" isDark={isDark} editMode={editMode} onRemove={onRemove} className={className} {...props}>
+    <div className="flex flex-col h-full">
       <div className={`text-xs font-medium uppercase tracking-wider ${isDark ? 'text-white/60' : 'text-slate-500'} text-center capitalize`}>
         {now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long' })}
       </div>
@@ -53,13 +53,13 @@ export const ClockWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
           <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} truncate`}>{monthValue.name}</div>
           <div className={`text-[10px] ${isDark ? 'text-white/70' : 'text-slate-600'} truncate`}>{monthValue.desc}</div>
         </div>
-        <Button size="icon" variant="ghost" onClick={() => { setValueDraft({ name: monthValue.name, emoji: monthValue.emoji, desc: monthValue.desc }); setEditingValue(true) }} className={`h-7 w-7 flex-shrink-0 ${isDark ? 'hover:bg-white/10 text-white' : ''}`} title="Cambiar valor">
+        <Button size="icon" variant="ghost" onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setValueDraft({ name: monthValue.name, emoji: monthValue.emoji, desc: monthValue.desc }); setEditingValue(true) }} className={`h-7 w-7 flex-shrink-0 ${isDark ? 'hover:bg-white/10 text-white' : ''}`} title="Cambiar valor">
           <Pencil className="w-3.5 h-3.5" />
         </Button>
       </div>
 
       <Dialog open={editingValue} onOpenChange={setEditingValue}>
-        <DialogContent className="sm:max-w-[480px]">
+        <DialogContent className="sm:max-w-[480px]" onPointerDownCapture={e => e.stopPropagation()} onKeyDownCapture={e => e.stopPropagation()} onMouseDown={e => e.stopPropagation()}>
           <DialogHeader>
             <DialogTitle>✨ Valor del mes</DialogTitle>
             <DialogDescription>Elige un valor predefinido o personaliza el tuyo</DialogDescription>
@@ -99,7 +99,6 @@ export const ClockWidget = React.forwardRef(({ id, isDark, editMode, onRemove, c
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </WidgetContainer>
+    </div>
   )
-})
-ClockWidget.displayName = 'ClockWidget'
+}

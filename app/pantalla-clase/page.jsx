@@ -28,6 +28,7 @@ import { TodosWidget } from '@/components/views/classroom-screen/widgets/TodosWi
 import { QuoteWidget } from '@/components/views/classroom-screen/widgets/QuoteWidget'
 import { NoteWidget } from '@/components/views/classroom-screen/widgets/NoteWidget'
 import { DiceWidget } from '@/components/views/classroom-screen/widgets/DiceWidget'
+import { WidgetContainer } from '@/components/views/classroom-screen/widgets/WidgetContainer'
 
 const WidgetMap = {
   clock: ClockWidget,
@@ -299,6 +300,7 @@ export default function ClassroomScreenPage() {
           containerPadding={[0, 0]}
           isDraggable={editMode}
           isResizable={editMode}
+          useCSSTransforms={true}
           draggableHandle=".drag-handle"
           onLayoutChange={onLayoutChange}
           compactType="vertical"
@@ -307,18 +309,25 @@ export default function ClassroomScreenPage() {
           {visibleWidgets.filter(k => WIDGET_REGISTRY[k]).map(key => {
             const WidgetComponent = WidgetMap[key]
             if (!WidgetComponent) return null
+            const reg = WIDGET_REGISTRY[key]
             
             return (
-              <WidgetComponent
+              <WidgetContainer
                 key={key}
                 id={key}
+                title={reg.name}
+                icon={reg.icon}
                 isDark={isDark}
                 editMode={editMode}
                 onRemove={toggleWidget}
                 className={cardClass}
-                students={students}
-                privacy={privacy}
-              />
+              >
+                <WidgetComponent
+                  isDark={isDark}
+                  students={students}
+                  privacy={privacy}
+                />
+              </WidgetContainer>
             )
           })}
         </ResponsiveGridLayout>

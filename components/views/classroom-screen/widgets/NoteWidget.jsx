@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Textarea } from '@/components/ui/textarea'
-import { WidgetContainer } from './WidgetContainer'
-
-export const NoteWidget = React.forwardRef(({ id, isDark, editMode, onRemove, className, ...props }, ref) => {
+export function NoteWidget({ isDark }) {
   const [noteText, setNoteText] = useState('')
 
   useEffect(() => {
@@ -23,15 +21,13 @@ export const NoteWidget = React.forwardRef(({ id, isDark, editMode, onRemove, cl
   }
 
   return (
-    <WidgetContainer ref={ref} id={id} title="Nota libre" icon="📝" isDark={isDark} editMode={editMode} onRemove={onRemove} className={className} {...props}>
+    <div className="flex flex-col h-full">
       <Textarea 
         value={noteText} 
         onChange={handleChange} 
         className={`flex-1 min-h-0 text-lg resize-none font-medium ${isDark ? 'bg-white/10 border-white/10 text-white placeholder:text-white/40' : 'bg-yellow-50 border-yellow-200'}`} 
         placeholder="Escribe una nota..." 
-        onMouseDown={e => e.stopPropagation()}
       />
-    </WidgetContainer>
+    </div>
   )
-})
-NoteWidget.displayName = 'NoteWidget'
+}
