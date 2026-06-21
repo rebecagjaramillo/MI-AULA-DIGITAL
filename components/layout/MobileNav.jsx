@@ -28,7 +28,7 @@ export function MobileHeader() {
       {profile?.subjects && profile.subjects.length > 0 && (
         <div className="w-32">
           <Select value={activeSubject || ''} onValueChange={setActiveSubject}>
-            <SelectTrigger className="w-full bg-slate-50 border-slate-200 text-xs font-semibold text-slate-700 h-8 rounded-lg focus:ring-sky-500">
+            <SelectTrigger aria-label="Seleccionar materia" className="w-full bg-slate-50 border-slate-200 text-xs font-semibold text-slate-700 h-8 rounded-lg focus:ring-sky-500">
               <div className="flex items-center gap-1.5 truncate">
                 <BookOpen className="w-3 h-3 text-sky-500 flex-shrink-0" />
                 <span className="truncate">{activeSubject || 'Materia'}</span>
@@ -58,10 +58,10 @@ export function MobileBottomNav() {
           <Link
             key={item.key}
             href={item.path}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg ${active ? 'text-sky-600' : 'text-slate-400'}`}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-lg ${active ? 'text-sky-600' : 'text-slate-600'}`}
           >
             <Icon className="w-5 h-5" />
-            <span className="text-[10px] font-semibold">{item.label}</span>
+            <span className="text-2xs font-semibold">{item.label}</span>
           </Link>
         )
       })}

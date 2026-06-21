@@ -2,34 +2,37 @@
 
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronRight, GraduationCap, BookOpen } from 'lucide-react'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { ChevronRight, GraduationCap, BookOpen, LogOut } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { NAV_ITEMS } from '@/lib/constants'
-import { initials } from '@/lib/helpers'
-import { useProfile } from '@/contexts/ProfileContext'
+import { useStore, useGreeting } from '@/store/useStore'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const { profile, activeSubject, setActiveSubject } = useProfile()
+  const greetingName = useGreeting()
+  // ⚡ Ahora extraemos EXACTAMENTE lo que necesitamos. Si cambia 'loading', Sidebar NO se renderiza.
+  const profile = useStore(state => state.profile)
+  const activeSubject = useStore(state => state.activeSubject)
+  const setActiveSubject = useStore(state => state.setActiveSubject)
 
   return (
     <aside className="hidden lg:flex flex-col w-64 h-screen sticky top-0 bg-white border-r border-slate-200">
-      <div className="px-6 py-5 border-b border-slate-100">
+      <div className="px-6 pt-6 pb-2 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-sm">
             <GraduationCap className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="font-bold text-slate-900 text-[15px] leading-tight">MI AULA</div>
-            <div className="text-[11px] text-sky-600 font-semibold tracking-wider">DIGITAL</div>
+            <div className="text-xs text-sky-600 font-semibold tracking-wider">DIGITAL</div>
           </div>
         </div>
       </div>
 
       {profile?.subjects && profile.subjects.length > 0 && (
-        <div className="px-4 pt-4 pb-2 border-b border-slate-100">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block ml-1">Materia Activa</label>
+        <div className="px-4 pt-2 pb-4 border-b border-slate-100 shrink-0">
+          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block ml-1">MATERIA ACTIVA</label>
           <Select value={activeSubject || ''} onValueChange={setActiveSubject}>
             <SelectTrigger className="w-full bg-slate-50 border-slate-200 text-sm font-semibold text-slate-700 h-9 rounded-xl focus:ring-sky-500">
               <div className="flex items-center gap-2">
@@ -67,17 +70,18 @@ export default function Sidebar() {
           )
         })}
       </nav>
-      <div className="p-3 border-t border-slate-100">
-        <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-slate-50">
-          <Avatar className="w-9 h-9 border-2 border-white shadow-sm">
-            <AvatarFallback className="bg-gradient-to-br from-sky-500 to-indigo-600 text-white text-xs font-bold">
-              {initials(profile?.display_name || profile?.full_name || 'PR')}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-semibold text-slate-900 truncate">{profile?.display_name || 'Maestro/a'}</div>
-            <div className="text-[11px] text-slate-500 truncate">{profile?.school_name || 'Tu escuela'}</div>
-          </div>
+      <div className="p-4 mt-auto shrink-0">
+        <div className="bg-slate-50 rounded-xl border border-slate-200 p-2 flex flex-col gap-1.5">
+          <Link href="/configuracion" className="flex flex-col items-center text-center group pt-1 pb-0.5">
+            <div className="w-full min-w-0 px-1">
+              <div className="text-xs font-semibold text-slate-900 group-hover:text-sky-600 transition-colors leading-tight mb-0.5">{greetingName}</div>
+              <div className="text-[10px] text-slate-500 leading-tight">{profile?.school_name || 'Tu escuela'}</div>
+            </div>
+          </Link>
+          <Button variant="ghost" className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 justify-center h-8 px-2 rounded-lg font-medium text-[11px] shadow-sm border border-rose-100" onClick={() => window.location.href = '/'}>
+            <LogOut className="w-3.5 h-3.5 mr-1.5" />
+            Cerrar sesión
+          </Button>
         </div>
       </div>
     </aside>

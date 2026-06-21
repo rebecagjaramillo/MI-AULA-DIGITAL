@@ -16,7 +16,7 @@ export const WidgetContainer = React.forwardRef(({
     >
       <div className={`drag-handle flex items-center gap-2 px-3 py-1.5 border-b ${isDark ? 'border-white/10' : 'border-slate-800/50'} ${editMode ? 'cursor-move bg-current/5' : ''}`}>
         <span className="text-sm">{icon}</span>
-        <span className={`text-[11px] font-semibold flex-1 truncate uppercase tracking-wider ${isDark ? 'text-white/70' : 'text-slate-400'}`}>{title}</span>
+        <span className={`text-xs font-semibold flex-1 truncate uppercase tracking-wider ${isDark ? 'text-white/70' : 'text-slate-400'}`}>{title}</span>
         {editMode && (
           <button 
             onClick={() => onRemove(id)} 

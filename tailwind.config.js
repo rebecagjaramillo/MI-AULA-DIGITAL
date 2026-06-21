@@ -21,8 +21,15 @@ module.exports = {
     			border: 'hsl(var(--border))',
     			input: 'hsl(var(--input))',
     			ring: 'hsl(var(--ring))',
-    			background: 'hsl(var(--background))',
-    			foreground: 'hsl(var(--foreground))',
+    			background: 'var(--background)',
+    			foreground: 'var(--foreground)',
+    			textMuted: '#475569',
+    			slate: {
+    				400: '#475569', // Overridden for WCAG AAA
+    			},
+    			sky: {
+    				500: '#0284c7', // Overridden for WCAG AA
+    			},
     			primary: {
     				DEFAULT: 'hsl(var(--primary))',
     				foreground: 'hsl(var(--primary-foreground))'
@@ -74,6 +81,29 @@ module.exports = {
     			md: 'calc(var(--radius) - 2px)',
     			sm: 'calc(var(--radius) - 4px)'
     		},
+            fontSize: {
+                '2xs': ['0.625rem', { lineHeight: '1rem' }], // 10px
+                'xs': ['0.75rem', { lineHeight: '1rem' }], // 12px
+                'sm': ['0.875rem', { lineHeight: '1.25rem' }], // 14px
+                'base': ['1rem', { lineHeight: '1.5rem' }], // 16px
+                'lg': ['1.125rem', { lineHeight: '1.75rem' }], // 18px
+                'xl': ['1.25rem', { lineHeight: '1.75rem' }], // 20px
+                '2xl': ['1.5rem', { lineHeight: '2rem' }], // 24px
+            },
+            spacing: {
+                '1': '0.25rem', // 4px
+                '2': '0.5rem',  // 8px
+                '3': '0.75rem', // 12px
+                '4': '1rem',    // 16px
+                '6': '1.5rem',  // 24px
+                '8': '2rem',    // 32px
+                '12': '3rem',   // 48px
+            },
+            transitionDuration: {
+                'fast': '150ms',
+                'normal': '300ms',
+                'slow': '500ms',
+            },
     		keyframes: {
     			'accordion-down': {
     				from: {
@@ -90,11 +120,21 @@ module.exports = {
     				to: {
     					height: '0'
     				}
-    			}
+    			},
+                'fade-in': {
+                    '0%': { opacity: '0' },
+                    '100%': { opacity: '1' }
+                },
+                'slide-up': {
+                    '0%': { transform: 'translateY(10px)', opacity: '0' },
+                    '100%': { transform: 'translateY(0)', opacity: '1' }
+                }
     		},
     		animation: {
     			'accordion-down': 'accordion-down 0.2s ease-out',
-    			'accordion-up': 'accordion-up 0.2s ease-out'
+    			'accordion-up': 'accordion-up 0.2s ease-out',
+                'fade-in': 'fade-in 0.3s ease-in-out',
+                'slide-up': 'slide-up 0.4s ease-out'
     		}
     	}
     },

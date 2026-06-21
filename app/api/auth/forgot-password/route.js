@@ -1,5 +1,5 @@
 import { NextResponse } from "next/dist/server/web/spec-extension/response";
-import clientPromise from "@/lib/mongodb";
+import { clientPromise } from "@/lib/mongodb";
 import crypto from "crypto";
 
 export async function POST(req) {

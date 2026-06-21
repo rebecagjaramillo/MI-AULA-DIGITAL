@@ -1,10 +1,34 @@
 import './globals.css'
 import { Toaster } from 'sonner'
 import { SessionProviderWrapper } from '@/components/providers/SessionProviderWrapper'
+import { ReactQueryProvider } from '@/components/providers/ReactQueryProvider'
+import { GlobalErrorBoundary } from '@/components/error/GlobalErrorBoundary'
 
 export const metadata = {
   title: 'MI AULA DIGITAL',
   description: 'Plataforma integral para docentes: grupos, asistencia, planeaciones y más.',
+  openGraph: {
+    title: 'MI AULA DIGITAL',
+    description: 'Plataforma integral para docentes: gestiona tus grupos, calificaciones, y asistencia con facilidad.',
+    url: 'https://miauladigital.com',
+    siteName: 'MI AULA DIGITAL',
+    images: [
+      {
+        url: '/og-image.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'MI AULA DIGITAL - Dashboard',
+      },
+    ],
+    locale: 'es_MX',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'MI AULA DIGITAL',
+    description: 'Gestión escolar inteligente y moderna para docentes.',
+    images: ['/og-image.jpg'],
+  },
 }
 
 export default function RootLayout({ children }) {
@@ -18,8 +42,12 @@ export default function RootLayout({ children }) {
       </head>
       <body style={{ fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" }}>
         <SessionProviderWrapper>
-          {children}
-          <Toaster position="top-right" richColors />
+          <ReactQueryProvider>
+            <GlobalErrorBoundary>
+              {children}
+            </GlobalErrorBoundary>
+            <Toaster position="top-right" richColors />
+          </ReactQueryProvider>
         </SessionProviderWrapper>
       </body>
     </html>

@@ -66,14 +66,14 @@ export function TimerWidget({ isDark }) {
         {!timerRunning && (
           <div className="flex items-center gap-1">
             <Input type="number" min="0" max="99" className="w-12 h-7 text-center text-xs" value={timerMin} onChange={e => { const v = Number(e.target.value) || 0; setTimerMin(v); setTimerLeft(v*60 + timerSec); setTimerInitial(v*60 + timerSec) }} />
-            <span className="text-[10px] opacity-60">m</span>
+            <span className="text-2xs opacity-60">m</span>
             <Input type="number" min="0" max="59" className="w-12 h-7 text-center text-xs" value={timerSec} onChange={e => { const v = Number(e.target.value) || 0; setTimerSec(v); setTimerLeft(timerMin*60 + v); setTimerInitial(timerMin*60 + v) }} />
-            <span className="text-[10px] opacity-60">s</span>
+            <span className="text-2xs opacity-60">s</span>
           </div>
         )}
         <div className="flex gap-1 ml-auto flex-wrap">
           {[1,3,5,10,15].map(m => (
-            <Button key={m} size="sm" variant="outline" className={`h-6 px-1.5 text-[10px] ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`} onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setTimerMin(m); setTimerSec(0); setTimerInitial(m*60); setTimerLeft(m*60); setTimerRunning(false) }}>{m}m</Button>
+            <Button key={m} size="sm" variant="outline" className={`h-6 px-1.5 text-2xs ${isDark ? 'bg-white/10 border-white/20 text-white hover:bg-white/20' : ''}`} onMouseDown={e => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); setTimerMin(m); setTimerSec(0); setTimerInitial(m*60); setTimerLeft(m*60); setTimerRunning(false) }}>{m}m</Button>
           ))}
         </div>
       </div>

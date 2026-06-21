@@ -38,7 +38,7 @@ export function TeamsWidget({ isDark, students = [], privacy }) {
                 <div className={`bg-gradient-to-r ${colors[i % colors.length]} text-white px-2 py-1 text-xs font-bold`}>Equipo {i+1}</div>
                 <div className={`p-1.5 space-y-0.5 ${isDark ? 'bg-white/5' : 'bg-white/60'}`}>
                   {team.map(s => (
-                    <div key={s.id} className="text-[11px] font-medium truncate">
+                    <div key={s.id} className="text-xs font-medium truncate">
                       {privacy ? `#${s.student_number || '?'}` : `${s.student_number ? s.student_number + '. ' : ''}${s.first_name} ${s.last_name}`}
                     </div>
                   ))}

@@ -25,12 +25,23 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
     return !g.archived
   })
 
+  const handleClear = () => {
+    const empty = {}
+    if (show.includes('level')) empty.level = ''
+    if (show.includes('grade')) empty.grade = ''
+    if (show.includes('group')) empty.group_id = ''
+    if (show.includes('subject')) empty.subject_id = ''
+    if (show.includes('trimestre')) empty.trimestre = ''
+    if (show.includes('dateRange')) { empty.from = ''; empty.to = '' }
+    onChange(empty)
+  }
+
   return (
     <Card className="border-slate-100 mb-4">
       <CardContent className={`p-3 flex flex-wrap items-end gap-2 ${compact ? '' : ''}`}>
         {show.includes('level') && (
-          <div className="min-w-[130px]">
-            <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Nivel</Label>
+          <div className="flex-1 min-w-[100px]">
+            <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Nivel</Label>
             <Select value={v.level || 'all'} onValueChange={x => set({ level: x === 'all' ? '' : x, grade: '', group_id: '' })}>
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -44,8 +55,8 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
           </div>
         )}
         {show.includes('grade') && (
-          <div className="min-w-[100px]">
-            <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Grado</Label>
+          <div className="flex-1 min-w-[100px]">
+            <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Grado</Label>
             <Select value={v.grade || 'all'} onValueChange={x => set({ grade: x === 'all' ? '' : x, group_id: '' })}>
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -56,8 +67,8 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
           </div>
         )}
         {show.includes('group') && (
-          <div className="min-w-[160px] flex-1">
-            <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Grupo</Label>
+          <div className="flex-1 min-w-[100px]">
+            <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Grupo</Label>
             <Select value={v.group_id || 'all'} onValueChange={x => set({ group_id: x === 'all' ? '' : x })}>
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue placeholder="Selecciona…" /></SelectTrigger>
               <SelectContent>
@@ -69,7 +80,7 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
         )}
         {show.includes('subject') && (
           <div className="min-w-[140px]">
-            <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Materia</Label>
+            <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Materia</Label>
             <Select value={v.subject_id || 'all'} onValueChange={x => set({ subject_id: x === 'all' ? '' : x })}>
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -81,7 +92,7 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
         )}
         {show.includes('trimestre') && (
           <div className="min-w-[110px]">
-            <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Trimestre</Label>
+            <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Trimestre</Label>
             <Select value={v.trimestre ? String(v.trimestre) : 'all'} onValueChange={x => set({ trimestre: x === 'all' ? null : Number(x) })}>
               <SelectTrigger className="h-9 mt-0.5 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -94,16 +105,16 @@ export function FilterBar({ value, onChange, groups = [], subjects = [], show = 
         {show.includes('dateRange') && (
           <>
             <div className="min-w-[130px]">
-              <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Desde</Label>
+              <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Desde</Label>
               <Input type="date" className="h-9 mt-0.5 text-sm" value={v.from || ''} onChange={e => set({ from: e.target.value })} />
             </div>
             <div className="min-w-[130px]">
-              <Label className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Hasta</Label>
+              <Label className="text-2xs font-semibold uppercase tracking-wide text-slate-500">Hasta</Label>
               <Input type="date" className="h-9 mt-0.5 text-sm" value={v.to || ''} onChange={e => set({ to: e.target.value })} />
             </div>
           </>
         )}
-        <Button size="sm" variant="ghost" onClick={() => onChange({})} className="h-9 text-slate-500 hover:text-slate-700 text-xs">
+        <Button size="sm" variant="ghost" onClick={handleClear} className="h-9 text-slate-500 hover:text-slate-700 text-xs">
           Limpiar
         </Button>
       </CardContent>

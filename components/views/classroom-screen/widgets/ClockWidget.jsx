@@ -58,7 +58,7 @@ export function ClockWidget({ isDark }) {
         <div className="flex-1 min-w-0">
           <div className={`text-[9px] uppercase font-bold tracking-wider ${isDark ? 'text-amber-200' : 'text-amber-700'}`}>Valor del mes</div>
           <div className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'} truncate`}>{monthValue.name}</div>
-          <div className={`text-[10px] ${isDark ? 'text-white/70' : 'text-slate-600'} truncate`}>{monthValue.desc}</div>
+          <div className={`text-2xs ${isDark ? 'text-white/70' : 'text-slate-600'} truncate`}>{monthValue.desc}</div>
         </div>
         <Button size="icon" variant="ghost" onClick={(e) => { e.stopPropagation(); setValueDraft({ name: monthValue.name, emoji: monthValue.emoji, desc: monthValue.desc }); setEditingValue(true) }} className={`h-7 w-7 flex-shrink-0 ${isDark ? 'hover:bg-white/10 text-white' : ''}`} title="Cambiar valor">
           <Pencil className="w-3.5 h-3.5" />
@@ -82,7 +82,7 @@ export function ClockWidget({ isDark }) {
                       <div className="flex items-center gap-2">
                         <div className="text-2xl">{v.emoji}</div>
                         <div className="flex-1 min-w-0">
-                          <div className="text-[10px] uppercase font-semibold text-slate-400">{months[i]}</div>
+                          <div className="text-2xs uppercase font-semibold text-slate-400">{months[i]}</div>
                           <div className="font-semibold text-slate-900 text-sm">{v.name}</div>
                         </div>
                       </div>
