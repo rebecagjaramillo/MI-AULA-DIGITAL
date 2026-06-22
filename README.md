@@ -9,10 +9,10 @@
 El sistema está construido sobre una arquitectura moderna, garantizando escalabilidad, rendimiento y mantenibilidad:
 
 - **Framework Core:** [Next.js](https://nextjs.org/) (App Router)
-- **Database:** [MongoDB](https://www.mongodb.com/)
+- **Database:** [MongoDB](https://www.mongodb.com/) gestionada a través de **[Prisma ORM](https://www.prisma.io/)**
 - **Authentication:** [NextAuth.js](https://next-auth.js.org/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/) & [shadcn/ui](https://ui.shadcn.com/)
-- **State Management:** [Zustand](https://zustand-demo.pmnd.rs/) & [TanStack Query (React Query)](https://tanstack.com/query/latest)
+- **State Management:** [Zustand](https://zustand-demo.pmnd.rs/) (Estado Global Atómico)
 - **Validation:** [Zod](https://zod.dev/) & [React Hook Form](https://react-hook-form.com/)
 - **Testing:** [Vitest](https://vitest.dev/) & [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 - **Observability:** [Sentry](https://sentry.io/)
@@ -30,7 +30,7 @@ El *'porqué'* detrás del proyecto. Hemos blindado la aplicación tomando las s
 **Zod en toda la API y formularios.** Garantizamos que los datos corruptos nunca toquen nuestra base de datos. Zod valida las solicitudes entrantes en la API y, en paralelo, interactúa sin esfuerzo con React Hook Form usando `zodResolver` para proporcionar un feedback instantáneo al usuario en el frontend.
 
 ### 3. State Management
-**Zustand para estados globales atómicos y React Query para caché.** Evitamos los *re-renders* innecesarios del *Context API* migrando nuestro estado global (perfil, grupos activos) a Zustand, permitiendo a los componentes suscribirse solo a la porción de datos que necesitan. Para el estado asíncrono y comunicación con el backend, confiamos en React Query, obteniendo caché automática y estados de carga impecables.
+**Zustand para estados globales atómicos.** Evitamos los *re-renders* innecesarios del *Context API* centralizando nuestro estado global (perfil, grupos activos, filtros en cascada) en Zustand, permitiendo a los componentes suscribirse de manera quirúrgica solo a la porción de datos que necesitan. Para el consumo de datos de backend en el *App Router*, utilizamos *Server Components* integrados directamente con Prisma.
 
 ### 4. Performance
 **Code Splitting y Skeleton Screens.** Implementamos *Lazy Loading* (`next/dynamic`) en rutas secundarias y widgets pesados. Esto optimiza el *Bundle Size* reduciendo drásticamente el tiempo de carga inicial. Además, los Skeleton Screens proporcionan retroalimentación visual continua evitando "saltos" en la interfaz.
@@ -54,8 +54,9 @@ mi-aula-digital/
 ├── components/         # Componentes React reutilizables (UI, Views, Layout)
 ├── lib/                # Utilidades y configuración core
 │   ├── schemas/        # Esquemas de validación de Zod
-│   ├── services/       # Lógica de negocio (Service Layer)
-│   └── helpers.js      # Funciones puras de ayuda
+│   ├── services/       # Lógica de negocio secundaria
+│   └── constants.js    # Diccionarios de datos centralizados
+├── prisma/             # Esquema de Prisma ORM (schema.prisma)
 ├── store/              # Estado global de Zustand
 └── vitest.config.js    # Configuración del entorno de pruebas
 ```
@@ -105,6 +106,8 @@ SENTRY_AUTH_TOKEN=
 | `npm run dev` | Inicia el servidor de **desarrollo** en `http://localhost:3000`. |
 | `npm run build` | Compila la aplicación para **producción**. |
 | `npm start` | Inicia el servidor de producción compilado. |
+| `npx prisma generate` | Genera el cliente de Prisma basado en el esquema. |
+| `npx prisma db push` | Sincroniza el esquema de Prisma con MongoDB. |
 | `npm test` | Ejecuta la suite completa de pruebas unitarias y de interfaz con **Vitest**. |
 | `npm run test:watch` | Inicia **Vitest** en modo de observación. |
 
