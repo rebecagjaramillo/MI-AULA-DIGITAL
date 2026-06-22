@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 
 export async function POST(request) {
@@ -13,11 +13,8 @@ export async function POST(request) {
       )
     }
 
-    const db = await getDb()
-    const usersCol = db.collection('users')
-
     // Verificar si ya existe
-    const existingUser = await usersCol.findOne({ email })
+    const existingUser = await prisma.user.findUnique({ where: { email } })
     if (existingUser) {
       return NextResponse.json(
         { error: 'El correo electrónico ya está registrado' },
@@ -29,15 +26,14 @@ export async function POST(request) {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // Guardar usuario
-    const newUser = {
-      name,
-      email,
-      password: hashedPassword,
-      image: null,
-      created_at: new Date().toISOString(),
-    }
-
-    await usersCol.insertOne(newUser)
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        image: null,
+      }
+    })
 
     return NextResponse.json({ success: true, message: 'Usuario registrado exitosamente' }, { status: 201 })
   } catch (error) {

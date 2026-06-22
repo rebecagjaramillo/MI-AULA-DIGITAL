@@ -1,6 +1,8 @@
-import { NextResponse } from "next/dist/server/web/spec-extension/response";
-import { clientPromise } from "@/lib/mongodb";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
+import nodemailer from "nodemailer";
+import { getForgotPasswordTemplate } from "@/lib/emailTemplate";
 
 export async function POST(req) {
   try {
@@ -10,11 +12,8 @@ export async function POST(req) {
       return NextResponse.json({ error: "Faltan datos requeridos." }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("mi_aula_digital");
-
     // Verificar que el usuario existe
-    const user = await db.collection("users").findOne({ email });
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       // Devolver success aunque no exista para evitar user enumeration attacks
       return NextResponse.json({ success: true });
@@ -29,27 +28,46 @@ export async function POST(req) {
     // Fecha de expiración: 1 hora
     const expiresAt = new Date(Date.now() + 3600000);
 
-    // Guardar token en MongoDB
-    await db.collection("reset_tokens").insertOne({
-      email,
-      token: hashedToken,
-      expiresAt,
-      createdAt: new Date(),
+    // Guardar token usando VerificationToken (nativo de NextAuth/Prisma)
+    await prisma.verificationToken.create({
+      data: {
+         identifier: email,
+         token: hashedToken,
+         expires: expiresAt,
+      }
     });
 
-    // Enviar el rawToken al usuario en el enlace
-    // En producción esto debería enviar un correo. Por ahora lo mostramos en consola.
-    const origin = req.headers.get("origin") || process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const origin = process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || req.headers.get("origin") || "http://localhost:3000";
     const resetLink = `${origin}/reset-password?token=${rawToken}&email=${encodeURIComponent(email)}`;
     
-    console.log("=========================================");
-    console.log("ENLACE DE RECUPERACIÓN DE CONTRASEÑA:");
-    console.log(resetLink);
-    console.log("=========================================");
+    // Configurar nodemailer transport
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_SERVER_HOST || "smtp.gmail.com",
+      port: Number(process.env.EMAIL_SERVER_PORT) || 465,
+      secure: true, // true para puerto 465
+      auth: {
+        user: process.env.EMAIL_SERVER_USER,
+        pass: process.env.EMAIL_SERVER_PASSWORD,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_FROM || '"Mi Aula Digital" <noreply@miauladigital.com>',
+      to: email,
+      subject: "Recuperación de Contraseña - Mi Aula Digital",
+      html: getForgotPasswordTemplate(resetLink),
+    };
+
+    // Enviar correo
+    await transporter.sendMail(mailOptions);
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error en forgot-password:", error);
-    return NextResponse.json({ error: "Error interno del servidor." }, { status: 500 });
+    // Solo imprimimos el mensaje de error por seguridad, para no filtrar contraseñas o datos del transporte
+    console.error("Error en forgot-password SMTP:", error.message);
+    return NextResponse.json(
+      { error: "No se pudo enviar el correo de recuperación. Inténtalo más tarde." }, 
+      { status: 500 }
+    );
   }
 }

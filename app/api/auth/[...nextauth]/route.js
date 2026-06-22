@@ -1,11 +1,12 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
-import { MongoDBAdapter } from "@auth/mongodb-adapter"
-import { clientPromise, getDb } from "@/lib/mongodb"
+import { PrismaAdapter } from "@auth/prisma-adapter"
+import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 
 export const authOptions = {
+  adapter: PrismaAdapter(prisma),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -21,8 +22,10 @@ export const authOptions = {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Faltan credenciales")
         }
-        const db = await getDb()
-        const user = await db.collection("users").findOne({ email: credentials.email })
+        
+        const user = await prisma.user.findUnique({ 
+          where: { email: credentials.email } 
+        })
         
         if (!user || !user.password) {
           throw new Error("Usuario no encontrado o método de inicio de sesión incorrecto")
@@ -33,11 +36,10 @@ export const authOptions = {
           throw new Error("Contraseña incorrecta")
         }
 
-        return { id: user._id.toString(), email: user.email, name: user.name, image: user.image }
+        return { id: user.id, email: user.email, name: user.name, image: user.image }
       }
     })
   ],
-  adapter: MongoDBAdapter(clientPromise, { databaseName: "mi_aula_digital" }),
   session: {
     strategy: "jwt"
   },

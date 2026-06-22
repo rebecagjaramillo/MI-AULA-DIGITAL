@@ -1,10 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
-import { v4 as uuidv4 } from 'uuid'
-
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-
 
 function json(data, status = 200) {
   return NextResponse.json(data, { status })
@@ -12,12 +9,6 @@ function json(data, status = 200) {
 
 function errorRes(message, status = 400) {
   return NextResponse.json({ error: message }, { status })
-}
-
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
 }
 
 async function readBody(request) {
@@ -28,25 +19,27 @@ export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
     const url = new URL(request.url)
     const search = Object.fromEntries(url.searchParams)
-    const db = await getDb()
 
     // /api/lesson-plans
     if (parts.length === 0) {
-      const col = db.collection('lesson_plans')
-      const filter = { teacher_id: TEACHER_ID }
-      if (search.groupId) filter.group_id = search.groupId
-      const list = await col.find(filter).sort({ date: -1, created_at: -1 }).toArray()
-      return json(list.map(stripId))
+      const filter = { userId: TEACHER_EMAIL }
+      // NOTE: Our simple model doesn't store group_id currently (kept it simple). We just return all.
+      const list = await prisma.lessonPlan.findMany({
+         where: filter,
+         orderBy: [{ date: 'desc' }, { created_at: 'desc' }]
+      })
+      return json(list)
     }
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma LessonPlans GET Error:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
 
@@ -54,39 +47,23 @@ export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
-    const db = await getDb()
     const body = await readBody(request)
 
     // /api/lesson-plans
     if (parts.length === 0) {
-      const col = db.collection('lesson_plans')
-      const doc = {
-        id: uuidv4(),
-        teacher_id: TEACHER_ID,
-        group_id: body.group_id || null,
-        subject: body.subject || '',
-        grade: body.grade || '',
-        topic: body.topic || '',
-        title: body.title || (body.topic || 'Planeación'),
-        date: body.date || new Date().toISOString().slice(0, 10),
-        duration_minutes: body.duration_minutes || 50,
-        objective: body.objective || '',
-        learning_goal: body.learning_goal || '',
-        start_activity: body.start_activity || '',
-        development_activity: body.development_activity || '',
-        closing_activity: body.closing_activity || '',
-        materials: body.materials || '',
-        evaluation: body.evaluation || '',
-        accommodations: body.accommodations || '',
-        observations: body.observations || '',
-        status: body.status || 'borrador',
-        created_at: new Date().toISOString(),
-      }
-      await col.insertOne(doc)
-      return json(stripId(doc))
+      const doc = await prisma.lessonPlan.create({
+         data: {
+            userId: TEACHER_EMAIL,
+            subject: body.subject || '',
+            title: body.title || (body.topic || 'Planeación'),
+            date: body.date || new Date().toISOString().slice(0, 10),
+            content: body.content || '',
+         }
+      })
+      return json(doc)
     }
 
     // /api/lesson-plans/generate-ai
@@ -97,10 +74,10 @@ export async function POST(request, { params }) {
       if (!webhookUrl) return errorRes('Por favor, configura N8N_WEBHOOK_URL en tu archivo .env', 500)
 
       try {
-        const unitsCol = db.collection('curriculum_units')
-        const topicsCol = db.collection('curriculum_topics')
-        
-        const units = await unitsCol.find({ teacher_id: TEACHER_ID, subject: subject, grade: grade }).sort({ order_index: 1 }).toArray()
+        const units = await prisma.curriculumUnit.findMany({ 
+           where: { userId: TEACHER_EMAIL, subject: subject, grade: grade },
+           orderBy: { order_index: 'asc' }
+        })
         
         let temario_del_curso = "Temario no disponible. Basa la clase en conocimientos generales de la materia."
         
@@ -108,7 +85,10 @@ export async function POST(request, { params }) {
           temario_del_curso = ""
           for (const u of units) {
             temario_del_curso += `Unidad: ${u.title}\n`
-            const topics = await topicsCol.find({ teacher_id: TEACHER_ID, unit_id: u.id }).sort({ order_index: 1 }).toArray()
+            const topics = await prisma.curriculumTopic.findMany({ 
+               where: { userId: TEACHER_EMAIL, unitId: u.id },
+               orderBy: { order_index: 'asc' }
+            })
             topics.forEach(t => {
               temario_del_curso += `  - Tema: ${t.title} (Objetivo: ${t.learning_goal})\n`
             })
@@ -140,6 +120,7 @@ export async function POST(request, { params }) {
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma LessonPlans POST Error:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }

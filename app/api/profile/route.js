@@ -1,20 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
-import { v4 as uuidv4 } from 'uuid'
-
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-
-
 function json(data, status = 200) {
   return NextResponse.json(data, { status })
-}
-
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
 }
 
 async function readBody(request) {
@@ -25,14 +15,20 @@ export async function GET(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
-
-    const db = await getDb()
-    const col = db.collection('profiles')
-    const p = await col.findOne({ teacher_id: TEACHER_ID })
-    return json(stripId(p) || null)
+    
+    // session.user.email is used as identifier
+    const user = await prisma.user.findUnique({
+       where: { email: session.user.email }
+    })
+    
+    if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+    
+    // Eliminamos datos sensibles antes de enviarlo
+    const { password, ...safeUser } = user
+    return json(safeUser)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Profile GET Error:", error)
+    return NextResponse.json({ error: "Error al obtener perfil" }, { status: 500 })
   }
 }
 
@@ -40,47 +36,36 @@ export async function POST(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
 
-    const db = await getDb()
-    const col = db.collection('profiles')
     const body = await readBody(request)
-    const now = new Date().toISOString()
-    const existing = await col.findOne({ teacher_id: TEACHER_ID })
     
-    if (existing) {
-      const updateData = { ...body, updated_at: now }
-      if (typeof updateData.subjects === 'string') {
-        updateData.subjects = updateData.subjects.split(',').map(s => s.trim()).filter(Boolean)
-      }
-      if (typeof updateData.education_levels === 'string') {
-        updateData.education_levels = updateData.education_levels.split(',').map(s => s.trim()).filter(Boolean)
-      }
-      delete updateData._id
-      delete updateData.teacher_id
-      await col.updateOne({ teacher_id: TEACHER_ID }, { $set: updateData })
-    } else {
-      const newData = { ...body }
-      if (typeof newData.subjects === 'string') {
-        newData.subjects = newData.subjects.split(',').map(s => s.trim()).filter(Boolean)
-      }
-      if (typeof newData.education_levels === 'string') {
-        newData.education_levels = newData.education_levels.split(',').map(s => s.trim()).filter(Boolean)
-      }
-      await col.insertOne({ id: uuidv4(), teacher_id: TEACHER_ID, ...newData, created_at: now, updated_at: now })
+    const updateData = { ...body }
+    if (typeof updateData.subjects === 'string') {
+      updateData.subjects = updateData.subjects.split(',').map(s => s.trim()).filter(Boolean)
+    }
+    if (typeof updateData.education_levels === 'string') {
+      updateData.education_levels = updateData.education_levels.split(',').map(s => s.trim()).filter(Boolean)
     }
     
-    const p = await col.findOne({ teacher_id: TEACHER_ID })
-    return json(stripId(p))
+    // No permitir actualizar campos protegidos directamente aquí
+    delete updateData.id
+    delete updateData.email
+    delete updateData.password
+    delete updateData.emailVerified
+
+    const updatedUser = await prisma.user.update({
+      where: { email: session.user.email },
+      data: updateData
+    })
+    
+    const { password, ...safeUser } = updatedUser
+    return json(safeUser)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Profile POST Error:", error)
+    return NextResponse.json({ error: "Error al actualizar perfil" }, { status: 500 })
   }
 }
 
 export async function PUT(request) {
-    const session = await getServerSession(authOptions)
-    if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
-
-  return POST(request) // The monolithic API handles POST and PUT identically for profile
+  return POST(request)
 }

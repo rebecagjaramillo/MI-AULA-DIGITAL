@@ -32,7 +32,7 @@ export function GroupsClient({ serverGroups }) {
   const [open, setOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [subjOpen, setSubjOpen] = useState(false)
-  const emptyForm = { level: '', group_name: 'A', subject: '', primary_subject_id: null, additional_subject_ids: [], school_year: '2024-2025', color: GROUP_COLORS[0], notes: '' }
+  const emptyForm = { level: '', grade: '', group_name: 'A', subject: '', primary_subject_id: null, additional_subject_ids: [], school_year: '2024-2025', color: GROUP_COLORS[0], notes: '' }
   const [form, setForm] = useState(emptyForm)
   const [filter, setFilter] = useState({})
   const [expanded, setExpanded] = useState({})
@@ -59,7 +59,7 @@ export function GroupsClient({ serverGroups }) {
   const openEdit = (g) => {
     setEditing(g)
     setForm({
-      level: g.level || 'Primaria', group_name: g.group_name,
+      level: g.level || 'Primaria', grade: g.grade || '', group_name: g.name || g.group_name || '',
       subject: g.subject || '', primary_subject_id: g.primary_subject_id || null,
       additional_subject_ids: g.additional_subject_ids || [],
       school_year: g.school_year, color: g.color, notes: g.notes || ''
@@ -84,7 +84,7 @@ export function GroupsClient({ serverGroups }) {
   }
   
   const remove = async (g) => {
-    if (!confirm(`¿Eliminar grupo ${g.level} ${g.group_name}? También se eliminarán sus alumnos.`)) return
+    if (!confirm(`¿Eliminar grupo ${g.level} ${g.grade ? g.grade + ' ' : ''}${g.name || g.group_name}? También se eliminarán sus alumnos.`)) return
     try { 
       await api('groups/' + g.id, { method: 'DELETE' })
       toast.success('Grupo eliminado')
@@ -124,6 +124,7 @@ export function GroupsClient({ serverGroups }) {
     if (filter.level && g.level !== filter.level) return false
     if (filter.grade && g.grade !== filter.grade) return false
     if (filter.group_id && g.id !== filter.group_id) return false
+    if (filter.groupName && (g.name || g.group_name) !== filter.groupName) return false
     return true
   })
   const tree = {}
@@ -185,14 +186,18 @@ export function GroupsClient({ serverGroups }) {
                           <CardContent className="p-5">
                             <div className="flex items-start justify-between mb-3">
                               <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-white text-lg shadow-sm" style={{ background: g.color }}>
-                                {g.group_name}
+                                {g.name || g.group_name}
                               </div>
                               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-sky-600 hover:bg-sky-50" onClick={(e) => { e.stopPropagation(); openEdit(g) }} aria-label="Editar grupo"><Pencil className="w-4 h-4" /></Button>
                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50" onClick={(e) => { e.stopPropagation(); remove(g) }} aria-label="Eliminar grupo"><Trash2 className="w-4 h-4" /></Button>
                               </div>
                             </div>
-                            <div className="font-bold text-slate-900 text-base">{g.level} "{g.group_name}"</div>
+                            <div className="font-bold text-slate-900 text-base flex items-center gap-1.5 flex-wrap">
+                              <span>{g.level}</span>
+                              {g.grade && <span>{g.grade}</span>}
+                              <span>"{g.name || g.group_name}"</span>
+                            </div>
                             {subjNames.length > 0 && (
                               <div className="flex flex-wrap gap-1.5 mt-2">
                                 {subjNames.slice(0,3).map((n,i) => <Badge key={i} variant="secondary" className="text-2xs py-0.5 bg-slate-100 text-slate-600 hover:bg-slate-200 border-none">{n}</Badge>)}
@@ -224,9 +229,9 @@ export function GroupsClient({ serverGroups }) {
             <DialogDescription>Asigna Nivel/Grado, Grupo y materias</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               <div>
-                <Label htmlFor="level" className="text-xs font-semibold text-slate-700">Nivel / Grado</Label>
+                <Label htmlFor="level" className="text-xs font-semibold text-slate-700">Nivel</Label>
                 <Select value={form.level} onValueChange={v => setForm({...form, level: v})}>
                   <SelectTrigger id="level" className="mt-1"><SelectValue placeholder="Selecciona..." /></SelectTrigger>
                   <SelectContent>
@@ -235,7 +240,11 @@ export function GroupsClient({ serverGroups }) {
                 </Select>
               </div>
               <div>
-                <Label htmlFor="group_name" className="text-xs font-semibold text-slate-700">Grupo / Letra</Label>
+                <Label htmlFor="grade" className="text-xs font-semibold text-slate-700">Grado</Label>
+                <Input id="grade" className="mt-1" value={form.grade || ''} onChange={e => setForm({...form, grade: e.target.value})} placeholder="Ej. 1ro, 2do..." />
+              </div>
+              <div>
+                <Label htmlFor="group_name" className="text-xs font-semibold text-slate-700">Grupo</Label>
                 <Input id="group_name" className="mt-1" value={form.group_name} onChange={e => setForm({...form, group_name: e.target.value})} placeholder="Ej. A, B, C..." />
               </div>
             </div>

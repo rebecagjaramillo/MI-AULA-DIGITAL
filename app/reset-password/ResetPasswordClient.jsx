@@ -2,9 +2,12 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Loader2, ArrowLeft } from "lucide-react";
-import Link from "next/link";
+import { Loader2, KeyRound } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function ResetPasswordClient() {
   const router = useRouter();
@@ -55,69 +58,80 @@ export function ResetPasswordClient() {
 
   if (!token || !email) {
     return (
-      <div className="z-10 w-full max-w-md p-8 bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl text-center">
-        <h1 className="text-xl font-bold text-white mb-4">Enlace Inválido</h1>
-        <p className="text-slate-400 mb-6">Falta el token de seguridad o el correo. Solicita un nuevo enlace.</p>
-        <button onClick={() => router.push("/forgot-password")} className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all">Solicitar nuevo enlace</button>
+      <div className="min-h-screen flex flex-col justify-center items-center bg-slate-50 relative overflow-hidden p-4">
+        <div className="z-10 w-full max-w-md p-8 bg-white border border-slate-200 rounded-2xl shadow-xl text-center">
+          <h1 className="text-xl font-bold text-slate-900 mb-4">Enlace Inválido</h1>
+          <p className="text-slate-500 mb-6 text-sm">Falta el token de seguridad o el correo. Solicita un nuevo enlace.</p>
+          <Button onClick={() => router.push("/forgot-password")} className="w-full h-11 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-md">
+            Solicitar nuevo enlace
+          </Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="z-10 w-full max-w-md p-8 bg-slate-900/60 backdrop-blur-xl border border-slate-800 rounded-3xl shadow-2xl">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">Nueva Contraseña</h1>
-        <p className="text-slate-400 text-sm">Ingresa tu nueva contraseña para la cuenta {email}</p>
-      </div>
-
-      {success ? (
-        <div className="text-center">
-          <div className="mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 text-green-400 text-sm">
-            ¡Tu contraseña se ha restablecido correctamente!
+    <div className="min-h-screen flex flex-col justify-center items-center bg-slate-50 relative overflow-hidden p-4">
+      <div className="z-10 w-full max-w-md p-8 bg-white border border-slate-200 rounded-2xl shadow-xl">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white mb-5 shadow-sm">
+            <KeyRound className="w-7 h-7" />
           </div>
-          <button
-            onClick={() => router.push("/login")}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all"
-          >
-            Ir al inicio de sesión
-          </button>
+          <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Nueva Contraseña</h1>
+          <p className="text-slate-500 text-sm">Ingresa tu nueva contraseña para la cuenta <span className="font-medium text-slate-700">{email}</span></p>
         </div>
-      ) : (
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5 ml-1">Nueva Contraseña</label>
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-white placeholder-slate-500 outline-none"
-              placeholder="••••••••"
-            />
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-1.5 ml-1">Confirmar Contraseña</label>
-            <input
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-white placeholder-slate-500 outline-none"
-              placeholder="••••••••"
-            />
+        {success ? (
+          <div className="text-center">
+            <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-sm font-medium">
+              ¡Tu contraseña se ha restablecido correctamente!
+            </div>
+            <Button
+              onClick={() => router.push("/login")}
+              className="w-full h-11 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-md mt-2"
+            >
+              Ir al inicio de sesión
+            </Button>
           </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="password" className="text-slate-700 mb-1.5 ml-0.5">Nueva Contraseña</Label>
+              <PasswordInput
+                id="password"
+                required
+                aria-label="Nueva Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="h-11"
+                placeholder="••••••••"
+              />
+            </div>
 
-          <button
-            type="submit"
-            disabled={loading || !password || !confirmPassword}
-            className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-all focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/25"
-          >
-            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-            {loading ? "Actualizando..." : "Restablecer Contraseña"}
-          </button>
-        </form>
-      )}
+            <div>
+              <Label htmlFor="confirmPassword" className="text-slate-700 mb-1.5 ml-0.5">Confirmar Contraseña</Label>
+              <PasswordInput
+                id="confirmPassword"
+                required
+                aria-label="Confirmar Contraseña"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="h-11"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading || !password || !confirmPassword}
+              className="w-full h-11 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-all shadow-md mt-4"
+            >
+              {loading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
+              {loading ? "Actualizando..." : "Restablecer Contraseña"}
+            </Button>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

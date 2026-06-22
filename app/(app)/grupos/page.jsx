@@ -1,31 +1,29 @@
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from 'next/navigation'
 import { GroupsClient } from './GroupsClient'
 
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
 async function getGroupsData() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
   
-  const TEACHER_ID = session.user.email
-  const db = await getDb()
+  const TEACHER_EMAIL = session.user.email
 
-  const col = db.collection('class_groups')
-  const list = await col.find({ teacher_id: TEACHER_ID }).sort({ created_at: 1 }).toArray()
+  const list = await prisma.group.findMany({
+     where: { userId: TEACHER_EMAIL },
+     orderBy: { created_at: 'asc' },
+     include: {
+        _count: {
+           select: { students: { where: { active: true } } }
+        }
+     }
+  })
   
   // Augment with student count
-  const studentsCol = db.collection('students')
-  const augmented = await Promise.all(list.map(async (g) => {
-    const count = await studentsCol.countDocuments({ teacher_id: TEACHER_ID, group_id: g.id, active: { $ne: false } })
-    return { ...stripId(g), student_count: count }
-  }))
+  const augmented = list.map(g => {
+    return { ...g, student_count: g._count.students }
+  })
   
   return augmented
 }

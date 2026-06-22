@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function LoginClient() {
   const router = useRouter();
@@ -95,9 +96,8 @@ export function LoginClient() {
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               required
               aria-label="Contraseña"
               value={password}

@@ -1,28 +1,21 @@
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from 'next/navigation'
 import { PlansClient } from './PlansClient'
 
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
 async function getLessonPlans() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
   
-  const TEACHER_ID = session.user.email
-  const db = await getDb()
+  const TEACHER_EMAIL = session.user.email
 
-  const list = await db.collection('lesson_plans')
-    .find({ teacher_id: TEACHER_ID })
-    .sort({ date: -1, created_at: -1 })
-    .toArray()
+  const list = await prisma.lessonPlan.findMany({
+     where: { userId: TEACHER_EMAIL },
+     orderBy: [ { date: 'desc' }, { created_at: 'desc' } ]
+  })
     
-  return list.map(stripId)
+  return list
 }
 
 export default async function PlansPage() {

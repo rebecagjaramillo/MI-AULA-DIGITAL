@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ChevronRight, GraduationCap, BookOpen, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { signOut } from 'next-auth/react'
 import { NAV_ITEMS } from '@/lib/constants'
 import { useStore, useGreeting } from '@/store/useStore'
 
@@ -78,7 +79,7 @@ export default function Sidebar() {
               <div className="text-[10px] text-slate-500 leading-tight">{profile?.school_name || 'Tu escuela'}</div>
             </div>
           </Link>
-          <Button variant="ghost" className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 justify-center h-8 px-2 rounded-lg font-medium text-[11px] shadow-sm border border-rose-100" onClick={() => window.location.href = '/'}>
+          <Button variant="ghost" className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 hover:text-rose-700 justify-center h-8 px-2 rounded-lg font-medium text-[11px] shadow-sm border border-rose-100" onClick={() => signOut({ callbackUrl: '/login' })}>
             <LogOut className="w-3.5 h-3.5 mr-1.5" />
             Cerrar sesión
           </Button>

@@ -38,9 +38,7 @@ export function ActivitiesClient({ serverActivities }) {
   const filteredGroups = activeSubject ? groups.filter(g => g.subject === activeSubject) : groups;
   const validGroupIds = new Set(filteredGroups.map(g => g.id));
 
-  const groupId = paramGroupId && validGroupIds.has(paramGroupId) 
-    ? paramGroupId 
-    : (filteredGroups.length > 0 ? filteredGroups[0].id : '')
+  const groupId = paramGroupId && validGroupIds.has(paramGroupId) ? paramGroupId : ''
     
   const setGroupId = (newId) => router.push(`/actividades?groupId=${newId}`)
 
@@ -97,7 +95,7 @@ export function ActivitiesClient({ serverActivities }) {
   return (
     <PageLayout
       title="Actividades"
-      subtitle={activeGroup ? `${activeGroup.grade} ${activeGroup.group_name} ${activeGroup.subject ? `· ${activeGroup.subject}` : ''}` : 'Selecciona un grupo'}
+      subtitle="Gestiona las tareas y proyectos de tus grupos."
       action={
         <Button onClick={openCreate} disabled={!groupId} className="bg-sky-500 hover:bg-sky-600 shadow-md">
           <Plus className="w-4 h-4 mr-1.5" /> Nueva actividad
@@ -116,7 +114,8 @@ export function ActivitiesClient({ serverActivities }) {
             value={{ ...filter, group_id: groupId }}
             onChange={(v) => { setFilter(v); if (v.group_id !== undefined) setGroupId(v.group_id || '') }}
             groups={filteredGroups} subjects={subjects}
-            show={['level','grade','group','subject','trimestre']}
+            show={['level','group']}
+            groupFilterMode="id"
           />
 
           {(() => {
@@ -133,8 +132,8 @@ export function ActivitiesClient({ serverActivities }) {
               <div className="w-16 h-16 bg-gradient-to-br from-sky-100 to-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <ListChecks className="w-8 h-8 text-sky-500" />
               </div>
-              <h3 className="font-bold text-slate-900 text-lg">{activities.filter(a => a.group_id === groupId).length === 0 ? 'Aún no hay actividades' : 'Sin resultados con esos filtros'}</h3>
-              <p className="text-sm text-slate-500 mt-1 mb-5">{activities.filter(a => a.group_id === groupId).length === 0 ? 'Crea tu primera tarea, examen o proyecto' : 'Ajusta los filtros o crea una nueva'}</p>
+              <h3 className="font-bold text-slate-900 text-lg">Organiza tus actividades</h3>
+              <p className="text-sm text-slate-500 mt-1 mb-5">Selecciona un grupo para empezar a registrar tareas, exámenes o proyectos.</p>
               <Button onClick={openCreate} className="bg-sky-500 hover:bg-sky-600"><Plus className="w-4 h-4 mr-1.5" /> Nueva actividad</Button>
             </div>
               )

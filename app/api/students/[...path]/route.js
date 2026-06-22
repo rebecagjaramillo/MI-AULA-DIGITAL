@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { v4 as uuidv4 } from 'uuid'
-
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
-
 
 function json(data, status = 200) {
   return NextResponse.json(data, { status })
@@ -12,12 +10,6 @@ function json(data, status = 200) {
 
 function errorRes(message, status = 400) {
   return NextResponse.json({ error: message }, { status })
-}
-
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
 }
 
 async function readBody(request) {
@@ -28,15 +20,14 @@ export async function GET(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
-    const db = await getDb()
     
     // /api/students/[id]/stats
     if (parts.length === 2 && parts[1] === 'stats') {
       const id = parts[0]
-      const recs = await db.collection('attendance_records').find({ teacher_id: TEACHER_ID, student_id: id }).toArray()
+      const recs = await prisma.attendance.findMany({ where: { userId: TEACHER_EMAIL, studentId: id } })
       const total = recs.length
       const presente = recs.filter(r => r.status === 'presente').length
       const falta = recs.filter(r => r.status === 'falta').length
@@ -49,11 +40,15 @@ export async function GET(request, { params }) {
     // /api/students/[id]/detail
     if (parts.length === 2 && parts[1] === 'detail') {
       const id = parts[0]
-      const student = await db.collection('students').findOne({ id, teacher_id: TEACHER_ID })
-      if (!student) return errorRes('No encontrado', 404)
+      const student = await prisma.student.findUnique({ where: { id } })
+      if (!student || student.userId !== TEACHER_EMAIL) return errorRes('No encontrado', 404)
       
-      const group = await db.collection('class_groups').findOne({ id: student.group_id, teacher_id: TEACHER_ID })
-      const recs = await db.collection('attendance_records').find({ teacher_id: TEACHER_ID, student_id: id }).sort({ date: -1 }).toArray()
+      const group = await prisma.group.findUnique({ where: { id: student.groupId } })
+      
+      const recs = await prisma.attendance.findMany({ 
+         where: { userId: TEACHER_EMAIL, studentId: id },
+         orderBy: { date: 'desc' }
+      })
       const total = recs.length
       const presente = recs.filter(r => r.status === 'presente').length
       const falta = recs.filter(r => r.status === 'falta').length
@@ -61,37 +56,55 @@ export async function GET(request, { params }) {
       const justificado = recs.filter(r => r.status === 'justificado').length
       const att_pct = total ? Math.round((presente + justificado + retardo*0.5) / total * 100) : null
 
-      const activities = await db.collection('activities').find({ teacher_id: TEACHER_ID, group_id: student.group_id }).sort({ due_date: -1 }).toArray()
-      const grades = await db.collection('activity_grades').find({ teacher_id: TEACHER_ID, student_id: id }).toArray()
-      const gradeRows = activities.map(a => {
-        const g = grades.find(gg => gg.activity_id === a.id)
-        return { activity_id: a.id, title: a.title, type: a.activity_type, due_date: a.due_date, max_score: a.max_score, score: g?.score ?? null, status: g?.status || 'pendiente', feedback: g?.feedback || '' }
+      const activities = await prisma.activity.findMany({
+         where: { userId: TEACHER_EMAIL, groupId: student.groupId },
+         orderBy: { due_date: 'desc' },
+         include: {
+            grades: { where: { studentId: id } }
+         }
       })
+      
+      const gradeRows = activities.map(a => {
+        const g = a.grades[0]
+        return { 
+           activity_id: a.id, title: a.title, type: a.activity_type, due_date: a.due_date, 
+           max_score: a.max_score, score: g?.score ?? null, status: g?.status || 'pendiente', feedback: g?.feedback || '' 
+        }
+      })
+      
       const scored = gradeRows.filter(r => r.score !== null && r.score !== undefined)
       const avg = scored.length ? (scored.reduce((s,r) => s + (Number(r.score)/Number(r.max_score))*10, 0) / scored.length).toFixed(1) : null
       const activities_done = scored.length
       const activities_pending = Math.max(0, activities.length - activities_done)
 
-      const points = await db.collection('student_points').find({ teacher_id: TEACHER_ID, student_id: id }).sort({ date: -1 }).toArray()
+      const points = await prisma.studentPoint.findMany({
+         where: { userId: TEACHER_EMAIL, studentId: id },
+         orderBy: { created_at: 'desc' }
+      })
+      
       const points_positive = points.filter(p => p.points > 0).reduce((s,p) => s + p.points, 0)
       const points_negative = points.filter(p => p.points < 0).reduce((s,p) => s + p.points, 0)
 
-      const observations = await db.collection('student_observations').find({ teacher_id: TEACHER_ID, student_id: id }).sort({ created_at: -1 }).toArray()
+      const observations = await prisma.studentObservation.findMany({
+         where: { userId: TEACHER_EMAIL, studentId: id },
+         orderBy: { created_at: 'desc' }
+      })
 
       return json({
-        student: stripId(student),
-        group: stripId(group),
+        student,
+        group,
         stats: { total, presente, falta, retardo, justificado, attendance_pct: att_pct, activities_done, activities_pending, average: avg, points_positive, points_negative, points_total: points_positive + points_negative },
-        attendance_records: recs.map(stripId),
+        attendance_records: recs,
         grades: gradeRows,
-        points: points.map(stripId),
-        observations: observations.map(stripId),
+        points,
+        observations,
       })
     }
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student GET Detail Error:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
 
@@ -99,63 +112,70 @@ export async function POST(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
-    const db = await getDb()
     const body = await readBody(request)
     
     // /api/students/bulk
     if (parts.length === 1 && parts[0] === 'bulk') {
-      const col = db.collection('students')
       const names = (body.names || '').split('\n').map(s => s.trim()).filter(Boolean)
       const docs = names.map((name, i) => {
         const nameParts = name.split(' ')
         const first = nameParts[0] || ''
         const last = nameParts.slice(1).join(' ') || ''
         return {
-          id: uuidv4(), teacher_id: TEACHER_ID, group_id: body.group_id,
-          first_name: first, last_name: last,
+          userId: TEACHER_EMAIL, 
+          groupId: body.group_id,
+          first_name: first, 
+          last_name: last,
           student_number: (body.start_number || 1) + i,
           guardian_name: '', guardian_contact: '', notes: '', active: true,
-          created_at: new Date().toISOString(),
+          created_at: new Date(),
         }
       })
-      if (docs.length) await col.insertMany(docs)
-      return json({ inserted: docs.length, students: docs })
+      
+      if (docs.length > 0) {
+         const result = await prisma.student.createMany({ data: docs })
+         return json({ inserted: result.count })
+      }
+      return json({ inserted: 0 })
     }
 
     // /api/students/[id]/points
     if (parts.length === 2 && parts[1] === 'points') {
       const id = parts[0]
-      const doc = {
-        id: uuidv4(), teacher_id: TEACHER_ID, student_id: id,
-        category: body.category || 'Otro',
-        points: Number(body.points || 0),
-        note: body.note || '',
-        date: body.date || new Date().toISOString().slice(0,10),
-        created_at: new Date().toISOString(),
-      }
-      await db.collection('student_points').insertOne(doc)
-      return json(stripId(doc))
+      const newPoint = await prisma.studentPoint.create({
+         data: {
+            userId: TEACHER_EMAIL,
+            studentId: id,
+            category: body.category || 'Otro',
+            points: Number(body.points || 0),
+            note: body.note || '',
+            date: body.date || new Date().toISOString().slice(0,10),
+         }
+      })
+      return json(newPoint)
     }
 
     // /api/students/[id]/observations
     if (parts.length === 2 && parts[1] === 'observations') {
       const id = parts[0]
-      const doc = {
-        id: uuidv4(), teacher_id: TEACHER_ID, student_id: id,
-        text: body.text || '',
-        type: body.type || 'general',
-        created_at: new Date().toISOString(),
-      }
-      await db.collection('student_observations').insertOne(doc)
-      return json(stripId(doc))
+      const newObs = await prisma.studentObservation.create({
+         data: {
+            userId: TEACHER_EMAIL,
+            studentId: id,
+            text: body.text || '',
+            type: body.type || 'general',
+         }
+      })
+      return json(newObs)
     }
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student POST Error:", error)
+    return NextResponse.json({ error: "Error interno" }, { status: 500 })
   }
 }
 
@@ -163,28 +183,45 @@ export async function PUT(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
-    const db = await getDb()
-    const body = await readBody(request)
     
     // /api/students/[id]
     if (parts.length === 1) {
       const id = parts[0]
-      const col = db.collection('students')
-      const set = {}
-      ;['first_name','last_name','student_number','guardian_name','guardian_contact','notes','active','group_id','nfc_uid'].forEach(k => { 
-        if (body[k] !== undefined) set[k] = body[k] 
-      })
-      await col.updateOne({ id, teacher_id: TEACHER_ID }, { $set: set })
-      const s = await col.findOne({ id, teacher_id: TEACHER_ID })
-      return json(stripId(s))
+      const body = await readBody(request)
+      
+      const updateData = {}
+      if (body.first_name !== undefined) updateData.first_name = body.first_name
+      if (body.last_name !== undefined) updateData.last_name = body.last_name
+      if (body.student_number !== undefined) updateData.student_number = body.student_number ? Number(body.student_number) : null
+      if (body.guardian_name !== undefined) updateData.guardian_name = body.guardian_name
+      if (body.guardian_contact !== undefined) updateData.guardian_contact = body.guardian_contact
+      if (body.notes !== undefined) updateData.notes = body.notes
+      if (body.active !== undefined) updateData.active = body.active
+      if (body.nfc_uid !== undefined) updateData.nfc_uid = body.nfc_uid
+      if (body.group_id !== undefined) updateData.groupId = body.group_id
+
+      try {
+        const student = await prisma.student.findUnique({ where: { id } })
+        if (!student || student.userId !== TEACHER_EMAIL) return errorRes('No autorizado', 403)
+
+        const updatedStudent = await prisma.student.update({
+          where: { id },
+          data: updateData
+        })
+        return json(updatedStudent)
+      } catch (err) {
+        if (err.code === 'P2025') return errorRes('Estudiante no encontrado', 404)
+        throw err;
+      }
     }
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student PUT Error:", error)
+    return NextResponse.json({ error: "Error al actualizar el estudiante" }, { status: 500 })
   }
 }
 
@@ -192,36 +229,48 @@ export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const parts = params?.path || []
-    const db = await getDb()
     
     // /api/students/[id]
     if (parts.length === 1) {
       const id = parts[0]
-      await db.collection('students').deleteOne({ id, teacher_id: TEACHER_ID })
-      return json({ ok: true })
+      try {
+        const student = await prisma.student.findUnique({ where: { id: id } })
+        if (!student) return errorRes('Estudiante no encontrado', 404)
+        if (student.userId !== TEACHER_EMAIL) return errorRes('No autorizado', 403)
+        
+        await prisma.student.delete({ where: { id: id } })
+        return json({ ok: true })
+      } catch (err) {
+        if (err.code === 'P2025') return errorRes('Estudiante no encontrado', 404)
+        if (err.code === 'P2023') return errorRes('Formato de ID inválido', 400)
+        throw err;
+      }
     }
 
     // /api/students/[id]/points/[pointId]
     if (parts.length === 3 && parts[1] === 'points') {
-      const id = parts[0]
       const pointId = parts[2]
-      await db.collection('student_points').deleteOne({ id: pointId, teacher_id: TEACHER_ID, student_id: id })
+      const point = await prisma.studentPoint.findUnique({ where: { id: pointId } })
+      if (!point || point.userId !== TEACHER_EMAIL) return errorRes('No autorizado', 403)
+      await prisma.studentPoint.delete({ where: { id: pointId } })
       return json({ ok: true })
     }
 
     // /api/students/[id]/observations/[obsId]
     if (parts.length === 3 && parts[1] === 'observations') {
-      const id = parts[0]
       const obsId = parts[2]
-      await db.collection('student_observations').deleteOne({ id: obsId, teacher_id: TEACHER_ID, student_id: id })
+      const obs = await prisma.studentObservation.findUnique({ where: { id: obsId } })
+      if (!obs || obs.userId !== TEACHER_EMAIL) return errorRes('No autorizado', 403)
+      await prisma.studentObservation.delete({ where: { id: obsId } })
       return json({ ok: true })
     }
 
     return errorRes('Not found', 404)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student DELETE Error:", error)
+    return NextResponse.json({ error: "Error al eliminar el estudiante" }, { status: 500 })
   }
 }

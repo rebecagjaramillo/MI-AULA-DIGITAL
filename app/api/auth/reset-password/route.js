@@ -1,5 +1,5 @@
-import { NextResponse } from "next/dist/server/web/spec-extension/response";
-import { clientPromise } from "@/lib/mongodb";
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 
@@ -15,17 +15,16 @@ export async function POST(req) {
       return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres." }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("mi_aula_digital");
-
     // Hashear el token recibido para compararlo con el guardado
     const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
 
-    // Buscar el token en la base de datos
-    const resetTokenDoc = await db.collection("reset_tokens").findOne({
-      email,
-      token: hashedToken,
-      expiresAt: { $gt: new Date() }, // Debe ser válido y no haber expirado
+    // Buscar el token en la base de datos usando VerificationToken
+    const resetTokenDoc = await prisma.verificationToken.findFirst({
+      where: {
+         identifier: email,
+         token: hashedToken,
+         expires: { gt: new Date() } // Debe ser válido y no haber expirado
+      }
     });
 
     if (!resetTokenDoc) {
@@ -36,13 +35,20 @@ export async function POST(req) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Actualizar la contraseña del usuario
-    await db.collection("users").updateOne(
-      { email },
-      { $set: { password: hashedPassword, updatedAt: new Date() } }
-    );
+    await prisma.user.update({
+      where: { email },
+      data: { password: hashedPassword }
+    });
 
     // Eliminar el token usado para que no se pueda volver a utilizar
-    await db.collection("reset_tokens").deleteOne({ _id: resetTokenDoc._id });
+    await prisma.verificationToken.delete({
+      where: {
+         identifier_token: {
+            identifier: email,
+            token: hashedToken
+         }
+      }
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

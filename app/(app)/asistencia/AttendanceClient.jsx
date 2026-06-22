@@ -23,6 +23,8 @@ export function AttendanceClient({ serverStudents, serverAttendance, resolvedGro
   const groupId = resolvedGroupId || ''
   const date = resolvedDate
 
+  const [filter, setFilter] = useState({ group_id: groupId })
+
   const setGroupId = (newId) => router.push(`/asistencia?groupId=${newId}&date=${date}`)
   const setDateUrl = (newDate) => router.push(`/asistencia?groupId=${groupId}&date=${newDate}`)
 
@@ -108,7 +110,7 @@ export function AttendanceClient({ serverStudents, serverAttendance, resolvedGro
   return (
     <PageLayout
       title="Pase de asistencia"
-      subtitle="Registra la asistencia del día rápidamente. Tap en cada estado."
+      subtitle="Registra la asistencia del día rápidamente."
       action={
         <Button onClick={save} disabled={!students.length || saving} className="bg-emerald-500 hover:bg-emerald-600 shadow-md">
           <CheckCircle2 className="w-4 h-4 mr-1.5" /> {saving ? 'Guardando...' : 'Guardar asistencia'}
@@ -117,10 +119,11 @@ export function AttendanceClient({ serverStudents, serverAttendance, resolvedGro
     >
 
       <FilterBar
-        value={{ group_id: groupId }}
-        onChange={(v) => { if (v.group_id !== undefined) setGroupId(v.group_id || '') }}
+        value={{ ...filter, group_id: groupId }}
+        onChange={(v) => { setFilter(v); if (v.group_id !== undefined) setGroupId(v.group_id || '') }}
         groups={groups} subjects={[]}
-        show={['level','grade','group']}
+        show={['level','group']}
+        groupFilterMode="id"
       />
 
       <Card className="border-slate-100 mb-4 mt-4">
@@ -162,7 +165,7 @@ export function AttendanceClient({ serverStudents, serverAttendance, resolvedGro
             <ClipboardCheck className="w-8 h-8 text-slate-400" />
           </div>
           <h3 className="font-bold text-slate-900 text-lg">{!groupId ? 'Selecciona un grupo' : 'Sin alumnos'}</h3>
-          <p className="text-sm text-slate-500 mt-1">{!groupId ? 'Primero crea un grupo y agrega alumnos.' : 'Agrega alumnos al grupo para tomar asistencia.'}</p>
+          <p className="text-sm text-slate-500 mt-1">{!groupId ? 'Selecciona un grupo para pasar lista.' : 'Agrega alumnos al grupo para tomar asistencia.'}</p>
         </div>
       ) : (
         <Card className="border-slate-100 overflow-hidden">

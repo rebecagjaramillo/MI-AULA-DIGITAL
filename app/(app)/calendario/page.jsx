@@ -1,35 +1,28 @@
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from 'next/navigation'
 import { CalendarClient } from './CalendarClient'
 
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
 async function getCalendarData() {
   const session = await getServerSession(authOptions)
   if (!session) redirect('/login')
   
-  const TEACHER_ID = session.user.email
-  const db = await getDb()
+  const TEACHER_EMAIL = session.user.email
 
-  const events = await db.collection('calendar_events')
-    .find({ teacher_id: TEACHER_ID })
-    .sort({ start_date: 1 })
-    .toArray()
+  const events = await prisma.event.findMany({
+     where: { userId: TEACHER_EMAIL },
+     orderBy: { date: 'asc' }
+  })
     
-  const groups = await db.collection('class_groups')
-    .find({ teacher_id: TEACHER_ID })
-    .sort({ created_at: 1 })
-    .toArray()
+  const groups = await prisma.group.findMany({
+     where: { userId: TEACHER_EMAIL },
+     orderBy: { created_at: 'asc' }
+  })
     
   return {
-    events: events.map(stripId),
-    groups: groups.map(stripId)
+    events: events.map(e => ({ ...e, start_date: e.date, end_date: e.date, event_type: e.type })),
+    groups: groups
   }
 }
 

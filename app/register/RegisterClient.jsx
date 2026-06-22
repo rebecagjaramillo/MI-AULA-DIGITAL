@@ -8,6 +8,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 
 export function RegisterClient() {
   const router = useRouter();
@@ -99,9 +100,8 @@ export function RegisterClient() {
 
           <div>
             <Label htmlFor="password" className="text-slate-700 mb-1.5 ml-0.5">Contraseña</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               required
               minLength={6}
               aria-label="Contraseña"

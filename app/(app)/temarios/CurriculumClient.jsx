@@ -16,15 +16,8 @@ import { PageLayout } from '@/components/layout/PageLayout'
 import { toast } from 'sonner'
 import { api } from '@/lib/api'
 import { useProfile } from '@/contexts/ProfileContext'
-import { LEVELS_NEW } from '@/lib/constants'
-
-const TOPIC_STATUSES = [
-  { value: 'no_iniciado', label: 'No iniciado', color: 'bg-slate-100 text-slate-600 border-slate-200' },
-  { value: 'en_curso',    label: 'En curso',    color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  { value: 'visto',       label: 'Visto',       color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  { value: 'reforzar',    label: 'Reforzar',    color: 'bg-rose-100 text-rose-700 border-rose-200' },
-  { value: 'evaluado',    label: 'Evaluado',    color: 'bg-sky-100 text-sky-700 border-sky-200' },
-]
+import { useStore } from '@/store/useStore'
+import { LEVELS_NEW, TOPIC_STATUSES } from '@/lib/constants'
 
 export function CurriculumClient({ serverUnits }) {
   const router = useRouter()
@@ -36,6 +29,14 @@ export function CurriculumClient({ serverUnits }) {
   const [unitOpen, setUnitOpen] = useState(false)
   const [editingUnit, setEditingUnit] = useState(null)
   const [unitForm, setUnitForm] = useState({ title: '', description: '', subject: '', grade: '', level: '' })
+
+  const groups = useStore(s => s.groups)
+  
+  const filterLevelDef = LEVELS_NEW.find(l => l.key === filterLevel)
+  const filterAvailableGrades = filterLevelDef ? filterLevelDef.grades : Array.from(new Set(groups.map(g => g.grade).filter(Boolean)))
+
+  const formLevelDef = LEVELS_NEW.find(l => l.key === unitForm.level)
+  const formAvailableGrades = formLevelDef ? formLevelDef.grades : Array.from(new Set(groups.map(g => g.grade).filter(Boolean)))
 
   const allUnits = serverUnits || []
   const units = allUnits.filter(u => {
@@ -130,7 +131,13 @@ export function CurriculumClient({ serverUnits }) {
           </div>
           <div className="min-w-[140px]">
             <Label className="text-xs font-semibold">Grado</Label>
-            <Input className="mt-1 h-10" placeholder="Ej. 5°" value={filterGrade} onChange={e => setFilterGrade(e.target.value)} />
+            <Select value={filterGrade || 'all'} onValueChange={v => setFilterGrade(v === 'all' ? '' : v)}>
+              <SelectTrigger className="mt-1 h-10"><SelectValue placeholder="Todos" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {filterAvailableGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
           <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[200px]">
             <div className="text-xs font-semibold text-emerald-700">Avance general</div>
@@ -239,7 +246,13 @@ export function CurriculumClient({ serverUnits }) {
               </div>
               <div>
                 <Label htmlFor="grade" className="text-xs font-semibold">Grado</Label>
-                <Input id="grade" className="mt-1" value={unitForm.grade || ''} onChange={e => setUnitForm({...unitForm, grade: e.target.value})} placeholder="Ej. 5°" />
+                <Select value={unitForm.grade || 'none'} onValueChange={v => setUnitForm({...unitForm, grade: v === 'none' ? '' : v})}>
+                  <SelectTrigger id="grade" className="mt-1"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sin Grado</SelectItem>
+                    {formAvailableGrades.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

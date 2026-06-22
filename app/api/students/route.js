@@ -1,43 +1,46 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
-import { v4 as uuidv4 } from 'uuid'
-
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
-
 function json(data, status = 200) {
   return NextResponse.json(data, { status })
-}
-
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
-async function readBody(request) {
-  try { return await request.json() } catch { return {} }
 }
 
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    
     const TEACHER_ID = session.user.email
-
     const url = new URL(request.url)
     const search = Object.fromEntries(url.searchParams)
-    const db = await getDb()
-    const col = db.collection('students')
     
-    const filter = { teacher_id: TEACHER_ID }
-    if (search.groupId) filter.group_id = search.groupId
+    // Filtro base
+    const whereClause = { userId: TEACHER_ID }
+    if (search.groupId) whereClause.groupId = search.groupId
+
+    const students = await prisma.student.findMany({
+      where: whereClause,
+      orderBy: [
+        { student_number: 'asc' },
+        { last_name: 'asc' }
+      ],
+      include: {
+        group: true // Requerido: incluye la info del grupo
+      }
+    })
     
-    const list = await col.find(filter).sort({ student_number: 1, last_name: 1 }).toArray()
-    return json(list.map(stripId))
+    // Adaptación para que el formato concuerde con lo esperado por el frontend
+    const formattedStudents = students.map(s => ({
+      ...s,
+      created_at: s.created_at ? s.created_at.toISOString() : new Date().toISOString()
+    }))
+
+    return json(formattedStudents)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student GET Error:", error)
+    return NextResponse.json({ error: "Error al obtener estudiantes" }, { status: 500 })
   }
 }
 
@@ -45,29 +48,44 @@ export async function POST(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    
     const TEACHER_ID = session.user.email
-
-    const db = await getDb()
-    const col = db.collection('students')
-    const body = await readBody(request)
+    const body = await request.json()
     
-    const doc = {
-      id: uuidv4(), teacher_id: TEACHER_ID,
-      group_id: body.group_id,
-      first_name: body.first_name || '',
-      last_name: body.last_name || '',
-      student_number: body.student_number || null,
-      guardian_name: body.guardian_name || '',
-      guardian_contact: body.guardian_contact || '',
-      notes: body.notes || '',
-      active: body.active !== false,
-      nfc_uid: body.nfc_uid || null,
-      created_at: new Date().toISOString(),
+    if (!body.group_id) {
+      return NextResponse.json({ error: "El ID del grupo (group_id) es obligatorio" }, { status: 400 })
     }
+
+    // Prisma validará internamente que group_id sea un ObjectId válido para la relación
+    // y que el grupo exista.
+    const newStudent = await prisma.student.create({
+      data: {
+        userId: TEACHER_ID,
+        groupId: body.group_id, // Prisma lo asignará al campo `group_id` en MongoDB y verificará la relación
+        first_name: body.first_name || '',
+        last_name: body.last_name || '',
+        student_number: body.student_number ? Number(body.student_number) : null,
+        guardian_name: body.guardian_name || '',
+        guardian_contact: body.guardian_contact || '',
+        notes: body.notes || '',
+        active: body.active !== false,
+        nfc_uid: body.nfc_uid || null,
+        created_at: new Date()
+      }
+    })
     
-    await col.insertOne(doc)
-    return json(stripId(doc))
+    return json(newStudent)
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    console.error("Prisma Student POST Error:", error)
+    
+    // Error típico de Prisma cuando un ObjectId está mal formado o falla una restricción de foreign key
+    if (error.code === 'P2023') {
+       return NextResponse.json({ error: "El ID del grupo proporcionado no es válido." }, { status: 400 })
+    }
+    if (error.code === 'P2025') {
+       return NextResponse.json({ error: "El grupo especificado no existe." }, { status: 400 })
+    }
+
+    return NextResponse.json({ error: "Error interno al crear el estudiante" }, { status: 500 })
   }
 }

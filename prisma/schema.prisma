@@ -1,0 +1,305 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// MODELOS DE NEXTAUTH
+// ==========================================
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.String
+  access_token      String? @db.String
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.String
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  
+  // Perfil del maestro
+  full_name        String?
+  display_name     String?
+  school_name      String?
+  gender           String?
+  title            String?
+  shift            String?
+  term_dates       Json?
+  setupCompleted   Boolean   @default(false)
+  subjects         String[]  @default([])
+  education_levels String[]  @default([])
+  phone            String?
+  bio              String?
+  
+  accounts      Account[]
+  sessions      Session[]
+  groups        Group[]   // Relación: Un usuario (maestro) tiene muchos grupos
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}
+
+// ==========================================
+// MODELOS DEL NEGOCIO (MI AULA DIGITAL)
+// ==========================================
+
+model Group {
+  id                     String    @id @default(auto()) @map("_id") @db.ObjectId
+  name                   String    @map("group_name") // Mapeado al frontend viejo
+  level                  String?   @default("Primaria")
+  grade                  String?
+  subject                String?
+  primary_subject_id     String?
+  additional_subject_ids String[]  @default([])
+  school_year            String?
+  color                  String?   @default("#3b82f6")
+  notes                  String?
+  archived               Boolean   @default(false)
+  created_at             DateTime  @default(now())
+
+  // Relaciones
+  userId      String    @map("teacher_id") // Old code used teacher_id
+  user        User      @relation(fields: [userId], references: [email], onDelete: Cascade)
+  
+  students    Student[]
+  activities  Activity[]
+
+  @@map("class_groups")
+}
+
+model Student {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  student_number   Int?
+  first_name       String
+  last_name        String
+  active           Boolean  @default(true)
+  guardian_name    String?
+  guardian_contact String?
+  nfc_uid          String?
+  notes            String?
+  created_at       DateTime @default(now())
+  
+  // Relaciones
+  userId           String   @map("teacher_id") // El viejo código guardaba esto
+  groupId          String   @db.ObjectId @map("group_id")
+  group            Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  attendances      Attendance[]
+  points           StudentPoint[]
+  observations     StudentObservation[]
+
+  @@map("students")
+}
+
+model Activity {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  title         String
+  description   String?
+  activity_type String?
+  due_date      DateTime?
+  trimestre     Int?
+  max_score     Float?
+  weight        Float?
+  status        String?  @default("active")
+  created_at    DateTime @default(now())
+
+  // Relaciones
+  userId        String   @map("teacher_id")
+  groupId       String   @db.ObjectId @map("group_id")
+  group         Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  grades        ActivityGrade[]
+
+  @@map("activities")
+}
+
+model ActivityGrade {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  score       Float?
+  status      String?  @default("pendiente")
+  feedback    String?
+  created_at  DateTime @default(now())
+  
+  // Relaciones
+  userId      String   @map("teacher_id")
+  
+  activityId  String   @db.ObjectId @map("activity_id")
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  
+  // Asumimos que referenciamos al Student via UUID temporalmente, o ObjectId si ya está migrado.
+  // Para Prisma lo correcto es hacer la relación si podemos:
+  studentId   String   @db.ObjectId @map("student_id")
+
+  @@map("activity_grades")
+}
+
+model Attendance {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  date          DateTime
+  status        String   @default("presente") // "presente", "falta", "retardo", "justificado"
+  justification String?
+  notes         String?
+  subject       String?
+  created_at    DateTime @default(now())
+  
+  // Relaciones
+  userId        String   @map("teacher_id")
+  groupId       String   @db.ObjectId @map("group_id")
+  studentId     String   @db.ObjectId @map("student_id")
+  student       Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("attendance")
+}
+
+model StudentPoint {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  category    String   @default("Otro")
+  points      Int      @default(0)
+  note        String?
+  date        String?
+  created_at  DateTime @default(now())
+  
+  userId      String   @map("teacher_id")
+  studentId   String   @db.ObjectId @map("student_id")
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_points")
+}
+
+model StudentObservation {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  text        String
+  type        String   @default("general")
+  created_at  DateTime @default(now())
+  
+  userId      String   @map("teacher_id")
+  studentId   String   @db.ObjectId @map("student_id")
+  student     Student  @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("student_observations")
+}
+
+model Subject {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  color       String?  @default("#3b82f6")
+  level       String?  @default("Primaria")
+  created_at  DateTime @default(now())
+  
+  userId      String   @map("teacher_id")
+
+  @@map("subjects")
+}
+
+model CurriculumUnit {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   @default("Unidad")
+  description String?  @default("")
+  subject     String?  @default("")
+  grade       String?  @default("")
+  order_index Int      @default(0)
+  created_at  DateTime @default(now())
+
+  userId      String   @map("teacher_id")
+  
+  topics      CurriculumTopic[]
+
+  @@map("curriculum_units")
+}
+
+model CurriculumTopic {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  title          String   @default("Tema")
+  learning_goal  String?  @default("")
+  status         String?  @default("no_iniciado")
+  planned_date   String?
+  completed_date String?
+  order_index    Int      @default(0)
+  created_at     DateTime @default(now())
+
+  userId         String   @map("teacher_id")
+  unitId         String   @db.ObjectId @map("unit_id")
+  unit           CurriculumUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+
+  @@map("curriculum_topics")
+}
+
+model Event {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   
+  date        String
+  description String?  @default("")
+  type        String?  @default("general")
+  color       String?  @default("#3b82f6")
+  created_at  DateTime @default(now())
+
+  userId      String   @map("teacher_id")
+
+  @@map("events")
+}
+
+model LessonPlan {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   @default("Plan")
+  content     String?  @default("")
+  date        String?
+  subject     String?
+  created_at  DateTime @default(now())
+
+  userId      String   @map("teacher_id")
+
+  @@map("lesson_plans")
+}
+
+model LibraryResource {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String   @default("Recurso")
+  type        String   @default("link")
+  url         String?  @default("")
+  description String?  @default("")
+  subject     String?
+  tags        String[] @default([])
+  created_at  DateTime @default(now())
+
+  userId      String   @map("teacher_id")
+
+  @@map("library")
+}
+
+model Report {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  generatedAt DateTime @default(now())
+}

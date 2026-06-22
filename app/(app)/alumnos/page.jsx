@@ -1,46 +1,45 @@
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from 'next/navigation'
 import { StudentsClient } from './StudentsClient'
 
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
-async function getStudentsData(paramGroupId) {
-  const session = await getServerSession(authOptions)
-  if (!session) redirect('/login')
+async function getStudentsData(level, grade, groupName, groupId) {
+  const sessionAuth = await getServerSession(authOptions)
+  if (!sessionAuth) redirect('/login')
   
-  const TEACHER_ID = session.user.email
-  const db = await getDb()
+  const TEACHER_EMAIL = sessionAuth.user.email
 
-  let resolvedGroupId = paramGroupId
-  
-  // Si no hay groupId en la URL, buscamos el primer grupo del profesor
-  if (!resolvedGroupId) {
-    const groups = await db.collection('class_groups').find({ teacher_id: TEACHER_ID }).sort({ created_at: 1 }).limit(1).toArray()
-    if (groups.length > 0) {
-      resolvedGroupId = groups[0].id
-    }
+  // If nothing is selected, return empty
+  if (!level && !grade && !groupName && !groupId) {
+    return { students: [], filterState: { level: '', grade: '', groupName: '', groupId: '' } }
   }
 
-  const filter = { teacher_id: TEACHER_ID }
-  if (resolvedGroupId) filter.group_id = resolvedGroupId
+  const groupFilter = { userId: TEACHER_EMAIL }
+  if (groupId) groupFilter.id = groupId
+  if (level) groupFilter.level = level
+  if (grade) groupFilter.grade = grade
+  if (groupName) groupFilter.name = groupName
 
-  const list = await db.collection('students').find(filter).sort({ student_number: 1, last_name: 1 }).toArray()
+  const matchingGroups = await prisma.group.findMany({ where: groupFilter, select: { id: true } })
+  const groupIds = matchingGroups.map(g => g.id)
+
+  const list = await prisma.student.findMany({
+     where: { userId: TEACHER_EMAIL, groupId: { in: groupIds } },
+     orderBy: [
+        { student_number: 'asc' },
+        { last_name: 'asc' }
+     ]
+  })
   
   return { 
-    students: list.map(stripId), 
-    resolvedGroupId 
+    students: list, 
+    filterState: { level: level || '', grade: grade || '', groupName: groupName || '', groupId: groupId || '' }
   }
 }
 
 export default async function StudentsPage({ searchParams }) {
-  const paramGroupId = searchParams?.groupId
-  const data = await getStudentsData(paramGroupId)
+  const data = await getStudentsData(searchParams?.level, searchParams?.grade, searchParams?.groupName, searchParams?.groupId)
   
-  return <StudentsClient serverStudents={data.students} resolvedGroupId={data.resolvedGroupId} />
+  return <StudentsClient serverStudents={data.students} serverFilter={data.filterState} />
 }

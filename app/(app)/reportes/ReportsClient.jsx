@@ -13,23 +13,16 @@ import { initials, todayISO } from '@/lib/helpers'
 import { STATUS_CONFIG, LEVELS_NEW } from '@/lib/constants'
 import { PageLayout } from '@/components/layout/PageLayout'
 import { useProfile } from '@/contexts/ProfileContext'
+import { FilterBar } from '@/components/shared/FilterBar'
 
 export function ReportsClient({ serverGroups, serverStudents }) {
   const { profile } = useProfile()
   const customLevels = Array.isArray(profile?.education_levels) && profile.education_levels.length > 0 ? profile.education_levels : []
 
   const [reportType, setReportType] = useState('group')
-  
-  const [filterLevel, setFilterLevel] = useState('all')
-  const [filterGrade, setFilterGrade] = useState('all')
-  
-  const filteredGroups = serverGroups.filter(g => 
-    (filterLevel === 'all' || g.level === filterLevel) && 
-    (filterGrade === 'all' || g.grade === filterGrade)
-  )
-
-  const [groupId, setGroupId] = useState(filteredGroups[0]?.id || '')
-  const filteredStudents = serverStudents.filter(s => s.group_id === groupId)
+  const [filter, setFilter] = useState({})
+  const groupId = filter.group_id || ''
+  const filteredStudents = serverStudents.filter(s => s.groupId === groupId)
   
   const [studentId, setStudentId] = useState('')
   const [from, setFrom] = useState(() => { const d = new Date(); d.setDate(d.getDate()-30); return d.toISOString().slice(0,10) })
@@ -38,12 +31,7 @@ export function ReportsClient({ serverGroups, serverStudents }) {
   const [loading, setLoading] = useState(false)
   const [preview, setPreview] = useState(null)
 
-  // Ensure valid selection when filters change
-  useEffect(() => {
-    if (!filteredGroups.find(g => g.id === groupId) && filteredGroups.length > 0) {
-      setGroupId(filteredGroups[0].id)
-    }
-  }, [filteredGroups, groupId])
+  // Removed filteredGroups effect as FilterBar manages this internally
 
   useEffect(() => {
     if (!filteredStudents.find(s => s.id === studentId) && filteredStudents.length > 0) {
@@ -52,9 +40,7 @@ export function ReportsClient({ serverGroups, serverStudents }) {
   }, [filteredStudents, studentId])
 
   const handleClear = () => {
-    setFilterLevel('all')
-    setFilterGrade('all')
-    setGroupId(serverGroups[0]?.id || '')
+    setFilter({})
     const d = new Date()
     d.setDate(d.getDate() - 30)
     setFrom(d.toISOString().slice(0, 10))
@@ -134,56 +120,32 @@ export function ReportsClient({ serverGroups, serverStudents }) {
             })}
           </div>
 
-          <div className="flex flex-col md:flex-row gap-3 mb-3">
-            <div className="flex-1">
-              <Label htmlFor="filterLevel" className="text-xs font-semibold">Nivel</Label>
-              <Select value={filterLevel} onValueChange={setFilterLevel}>
-                <SelectTrigger id="filterLevel" className="mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {customLevels.length > 0 
-                    ? customLevels.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)
-                    : LEVELS_NEW.map(l => <SelectItem key={l.key} value={l.key}>{l.label}</SelectItem>)
-                  }
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="filterGrade" className="text-xs font-semibold">Grado</Label>
-              <Select value={filterGrade} onValueChange={setFilterGrade}>
-                <SelectTrigger id="filterGrade" className="mt-1"><SelectValue placeholder="Todos" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Array.from(new Set(serverGroups.map(g => g.grade).filter(Boolean))).map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1">
-              <Label htmlFor="groupId" className="text-xs font-semibold">Grupo</Label>
-              <Select value={groupId} onValueChange={setGroupId}>
-                <SelectTrigger id="groupId" className="mt-1"><SelectValue placeholder="—" /></SelectTrigger>
-                <SelectContent>
-                  {filteredGroups.map(g => <SelectItem key={g.id} value={g.id}>{g.level} · {g.grade} {g.group_name} {g.subject && `· ${g.subject}`}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            {reportType === 'student' && (
-              <div className="flex-1">
+          <FilterBar
+            value={filter}
+            onChange={(v) => { setFilter(v) }}
+            groups={serverGroups} subjects={[]}
+            show={['level','group']}
+            groupFilterMode="id"
+          />
+
+          {reportType === 'student' && (
+            <div className="flex flex-col md:flex-row items-end gap-3 mb-4">
+              <div className="flex-1 w-full">
                 <Label htmlFor="studentId" className="text-xs font-semibold">Alumno</Label>
                 <Select value={studentId} onValueChange={setStudentId}>
                   <SelectTrigger id="studentId" className="mt-1"><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>{filteredStudents.map(s => <SelectItem key={s.id} value={s.id}>{s.first_name} {s.last_name}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className="flex flex-col md:flex-row items-end gap-3 mb-1">
-            <div className="flex-1">
+            <div className="flex-1 w-full">
               <Label htmlFor="from" className="text-xs font-semibold">Desde</Label>
               <Input id="from" type="date" className="mt-1 w-full" value={from} onChange={e => setFrom(e.target.value)} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 w-full">
               <Label htmlFor="to" className="text-xs font-semibold">Hasta</Label>
               <Input id="to" type="date" className="mt-1 w-full" value={to} onChange={e => setTo(e.target.value)} />
             </div>

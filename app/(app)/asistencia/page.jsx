@@ -1,4 +1,4 @@
-import { getDb } from '@/lib/mongodb'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 import { redirect } from 'next/navigation'
@@ -6,27 +6,13 @@ import { AttendanceClient } from './AttendanceClient'
 import { todayISO } from '@/lib/helpers'
 import { v4 as uuidv4 } from 'uuid'
 
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
-}
-
 async function getAttendanceData(paramGroupId, paramDate) {
   const sessionAuth = await getServerSession(authOptions)
   if (!sessionAuth) redirect('/login')
   
-  const TEACHER_ID = sessionAuth.user.email
-  const db = await getDb()
+  const TEACHER_EMAIL = sessionAuth.user.email
 
-  let resolvedGroupId = paramGroupId
-  
-  if (!resolvedGroupId) {
-    const groups = await db.collection('class_groups').find({ teacher_id: TEACHER_ID }).sort({ created_at: 1 }).limit(1).toArray()
-    if (groups.length > 0) {
-      resolvedGroupId = groups[0].id
-    }
-  }
+  const resolvedGroupId = paramGroupId || ''
 
   const resolvedDate = paramDate || todayISO()
 
@@ -34,21 +20,36 @@ async function getAttendanceData(paramGroupId, paramDate) {
     return { students: [], attendance: { session: null, records: [] }, resolvedGroupId: '', resolvedDate }
   }
 
-  const students = await db.collection('students').find({ teacher_id: TEACHER_ID, group_id: resolvedGroupId }).sort({ student_number: 1, last_name: 1 }).toArray()
+  const students = await prisma.student.findMany({
+     where: { userId: TEACHER_EMAIL, groupId: resolvedGroupId },
+     orderBy: [ { student_number: 'asc' }, { last_name: 'asc' } ]
+  })
   
-  const sessions = db.collection('attendance_sessions')
-  const records = db.collection('attendance_records')
-  
-  let attSession = await sessions.findOne({ teacher_id: TEACHER_ID, group_id: resolvedGroupId, date: resolvedDate, subject: '' })
-  if (!attSession) {
-    attSession = { id: uuidv4(), teacher_id: TEACHER_ID, group_id: resolvedGroupId, subject: '', date: resolvedDate, notes: '', created_at: new Date().toISOString() }
+  const fromDate = new Date(resolvedDate)
+  const toDate = new Date(resolvedDate)
+  toDate.setHours(23, 59, 59, 999)
+
+  const recs = await prisma.attendance.findMany({
+     where: {
+        userId: TEACHER_EMAIL,
+        groupId: resolvedGroupId,
+        date: { gte: fromDate, lte: toDate }
+     }
+  })
+
+  // We fake an attendance session to keep compatibility with UI
+  const attSession = {
+     id: 'session-' + resolvedDate,
+     teacher_id: TEACHER_EMAIL,
+     group_id: resolvedGroupId,
+     subject: '',
+     date: resolvedDate,
+     notes: ''
   }
-  
-  const recs = await records.find({ teacher_id: TEACHER_ID, session_id: attSession.id }).toArray()
 
   return {
-    students: students.map(stripId),
-    attendance: { session: stripId(attSession), records: recs.map(stripId) },
+    students: students,
+    attendance: { session: attSession, records: recs.map(r => ({ ...r, student_id: r.studentId })) },
     resolvedGroupId,
     resolvedDate
   }

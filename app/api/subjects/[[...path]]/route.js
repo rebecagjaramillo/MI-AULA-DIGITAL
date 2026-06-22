@@ -1,17 +1,10 @@
 import { NextResponse } from 'next/server'
-import { getDb } from '@/lib/mongodb'
-import { v4 as uuidv4 } from 'uuid'
+import { prisma } from '@/lib/prisma'
 import { getServerSession } from "next-auth/next"
 import { authOptions } from "@/app/api/auth/[...nextauth]/route"
 
 function json(data, status = 200) {
   return NextResponse.json(data, { status })
-}
-
-function stripId(doc) {
-  if (!doc) return doc
-  const { _id, ...rest } = doc
-  return rest
 }
 
 async function readBody(request) {
@@ -22,12 +15,12 @@ export async function GET(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
-    const db = await getDb()
-    const col = db.collection('subjects')
-    const list = await col.find({ teacher_id: TEACHER_ID }).toArray()
-    return json(list.map(stripId))
+    const list = await prisma.subject.findMany({
+       where: { userId: TEACHER_EMAIL }
+    })
+    return json(list)
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -37,15 +30,19 @@ export async function POST(request) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
-    const db = await getDb()
-    const col = db.collection('subjects')
     const body = await readBody(request)
-    const now = new Date().toISOString()
-    const doc = { id: uuidv4(), teacher_id: TEACHER_ID, ...body, created_at: now, updated_at: now }
-    await col.insertOne(doc)
-    return json(stripId(doc))
+    
+    const doc = await prisma.subject.create({
+       data: {
+          userId: TEACHER_EMAIL,
+          name: body.name || 'Sin Nombre',
+          color: body.color || '#3b82f6',
+          level: body.level || 'Primaria',
+       }
+    })
+    return json(doc)
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -55,19 +52,27 @@ export async function PUT(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const { path } = params
     const id = path?.[0]
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 })
 
-    const db = await getDb()
-    const col = db.collection('subjects')
     const body = await readBody(request)
-    const now = new Date().toISOString()
-    await col.updateOne({ id, teacher_id: TEACHER_ID }, { $set: { ...body, updated_at: now } })
-    const doc = await col.findOne({ id, teacher_id: TEACHER_ID })
-    return json(stripId(doc))
+    
+    const doc = await prisma.subject.updateMany({
+       where: { id: id, userId: TEACHER_EMAIL },
+       data: {
+          name: body.name,
+          color: body.color,
+          level: body.level,
+       }
+    })
+    
+    if (doc.count === 0) return NextResponse.json({ error: 'Subject not found or not authorized' }, { status: 404 })
+
+    const updated = await prisma.subject.findUnique({ where: { id: id } })
+    return json(updated)
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -77,15 +82,18 @@ export async function DELETE(request, { params }) {
   try {
     const session = await getServerSession(authOptions)
     if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-    const TEACHER_ID = session.user.email
+    const TEACHER_EMAIL = session.user.email
 
     const { path } = params
     const id = path?.[0]
     if (!id) return NextResponse.json({ error: 'ID is required' }, { status: 400 })
 
-    const db = await getDb()
-    const col = db.collection('subjects')
-    await col.deleteOne({ id, teacher_id: TEACHER_ID })
+    const doc = await prisma.subject.deleteMany({
+       where: { id: id, userId: TEACHER_EMAIL }
+    })
+    
+    if (doc.count === 0) return NextResponse.json({ error: 'Subject not found' }, { status: 404 })
+
     return json({ success: true })
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
